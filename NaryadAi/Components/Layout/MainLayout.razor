@@ -1,7 +1,17 @@
 ﻿@inherits LayoutComponentBase
 
-<main>
-    <article class="content px-4">
-        @Body
-    </article>
-</main>
+<MudThemeProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Color="Color.Primary" Fixed="true">
+        <MudText Typo="Typo.h5" Class="ml-3">НарядAI</MudText>
+    </MudAppBar>
+
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
