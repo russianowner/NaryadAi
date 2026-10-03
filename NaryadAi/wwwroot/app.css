@@ -1,5 +1,19 @@
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 17px;
+}
+
+button, input, select, textarea, .mud-button-root, .mud-icon-button {
+    touch-action: manipulation;
+}
+
+.mud-button-root {
+    min-height: 56px;
+    font-size: 1rem;
+}
+
+.mud-input-control, .mud-select, .mud-input {
+    font-size: 1rem;
 }
 
 a, .btn-link {
@@ -43,7 +57,7 @@ h1:focus {
 }
 
     .blazor-error-boundary::after {
-        content: "An error has occurred."
+        content: "Произошла ошибка. Обновите страницу."
     }
 
 .darker-border-checkbox.form-check-input {
