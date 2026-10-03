@@ -1,0 +1,140 @@
+@page "/profile"
+@using NaryadAi.Models
+@using NaryadAi.Components.Pages.Profile
+
+<PageTitle>Мой профиль — НарядAI</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="profile-page">
+    @if (!isLoaded)
+    {
+        <div class="profile-loading">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Загружаем профиль…</MudText>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@errorMessage</MudAlert>
+    }
+    else if (employee is not null)
+    {
+        <MudStack Spacing="3">
+            <MudPaper Elevation="2" Class="profile-identity pa-4 pa-sm-6">
+                <div class="identity-main">
+                    <MudAvatar Color="Color.Secondary" Variant="Variant.Filled" Size="Size.Large" Class="profile-avatar">
+                        @Initials
+                    </MudAvatar>
+                    <div class="identity-copy">
+                        <MudText Typo="Typo.h5" Class="employee-name">@employee.FullName</MudText>
+                        <MudText Typo="Typo.body1" Color="Color.Secondary">@employee.Specialty</MudText>
+                        <div class="profile-tags">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@RoleLabel(employee.Role)</MudChip>
+                            @if (employee.Grade > 0)
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@employee.Grade разряд</MudChip>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="identity-status">
+                    <MudChip T="string" Color="EmployeeStatusColor" Variant="Variant.Filled" Icon="@Icons.Material.Filled.Circle">
+                        @StatusLabel(employee.Status)
+                    </MudChip>
+                </div>
+                <div class="identity-details">
+                    @if (!string.IsNullOrWhiteSpace(employee.Brigade))
+                    {
+                        <div><span>Бригада</span><strong>@employee.Brigade</strong></div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(employee.Shift))
+                    {
+                        <div><span>Смена</span><strong>@employee.Shift</strong></div>
+                    }
+                    <div><span>Табельный номер</span><strong>#@employee.Id</strong></div>
+                </div>
+            </MudPaper>
+
+            @if (employee.Role == "Master")
+            {
+                <section class="profile-section">
+                    <div class="section-heading">
+                        <div>
+                            <MudText Typo="Typo.overline" Color="Color.Secondary">ВАШИ НАРЯДЫ</MudText>
+                            <MudText Typo="Typo.h6">Сводка по созданным нарядам</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.Assignment" Color="Color.Primary" Size="Size.Large" />
+                    </div>
+                    <MudGrid Spacing="2">
+                        <MudItem xs="6" sm="3"><div class="profile-stat stat-blue"><span>Всего</span><strong>@totalOrders</strong></div></MudItem>
+                        <MudItem xs="6" sm="3"><div class="profile-stat stat-amber"><span>Активные</span><strong>@activeOrders</strong></div></MudItem>
+                        <MudItem xs="6" sm="3"><div class="profile-stat stat-green"><span>Исполнено</span><strong>@completedOrders</strong></div></MudItem>
+                        <MudItem xs="6" sm="3"><div class="profile-stat stat-red"><span>Просрочено</span><strong>@overdueOrders</strong></div></MudItem>
+                    </MudGrid>
+                </section>
+            }
+            else if (employee.Role == "Worker")
+            {
+                <section class="profile-section">
+                    <div class="section-heading">
+                        <div>
+                            <MudText Typo="Typo.overline" Color="Color.Secondary">МОЯ РАБОТА</MudText>
+                            <MudText Typo="Typo.h6">Показатели по нарядам</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.Handyman" Color="Color.Primary" Size="Size.Large" />
+                    </div>
+                    <MudGrid Spacing="2">
+                        <MudItem xs="6" sm="3"><div class="profile-stat stat-blue"><span>Назначено</span><strong>@totalOrders</strong></div></MudItem>
+                        <MudItem xs="6" sm="3"><div class="profile-stat stat-amber"><span>Активные</span><strong>@activeOrders</strong></div></MudItem>
+                        <MudItem xs="6" sm="3"><div class="profile-stat stat-green"><span>Исполнено</span><strong>@completedOrders</strong></div></MudItem>
+                        <MudItem xs="6" sm="3"><div class="profile-stat stat-red"><span>На доработку</span><strong>@reworkOrders</strong></div></MudItem>
+                    </MudGrid>
+                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Class="mt-3">
+                        Оценки ИИ и мастера появятся после подключения модуля проверки нарядов.
+                    </MudAlert>
+                </section>
+            }
+
+            <section class="profile-section">
+                <div class="section-heading">
+                    <div>
+                        <MudText Typo="Typo.overline" Color="Color.Secondary">ИСТОРИЯ</MudText>
+                        <MudText Typo="Typo.h6">Последние наряды</MudText>
+                    </div>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@recentOrders.Count записей</MudText>
+                </div>
+
+                @if (recentOrders.Count == 0)
+                {
+                    <div class="profile-empty">
+                        <MudIcon Icon="@Icons.Material.Filled.Inbox" Size="Size.Large" Color="Color.Secondary" />
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Наряды пока не назначались.</MudText>
+                    </div>
+                }
+                else
+                {
+                    <MudStack Spacing="2">
+                        @foreach (var order in recentOrders)
+                        {
+                            <MudPaper @key="order.Id" Elevation="0" Class="recent-order pa-3">
+                                <div class="order-heading">
+                                    <MudText Typo="Typo.subtitle1" Class="order-number">@order.Number</MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="OrderStatusColor(order.Status)" Variant="Variant.Outlined">
+                                        @order.Status
+                                    </MudChip>
+                                </div>
+                                <MudText Typo="Typo.body2" Class="order-equipment">
+                                    @(order.Equipment?.Name ?? "Оборудование") · @order.Location
+                                </MudText>
+                                <MudText Typo="Typo.body2" Class="order-description">@order.Description</MudText>
+                                <div class="order-footer">
+                                    <span>@order.Type · @order.Priority</span>
+                                    <span>Срок: @order.Deadline.ToLocalTime().ToString("dd.MM HH:mm")</span>
+                                </div>
+                            </MudPaper>
+                        }
+                    </MudStack>
+                }
+            </section>
+        </MudStack>
+    }
+</MudContainer>
