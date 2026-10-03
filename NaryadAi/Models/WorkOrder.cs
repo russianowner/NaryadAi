@@ -23,5 +23,23 @@
         public string? CloseFaultCode { get; set; }
         public string? CloseComment { get; set; }
         public string? PhotoAfterPath { get; set; }
+        public int? SiteId { get; set; }
+        public Site? Site { get; set; }
+
+        public DateTime? AcceptedAt { get; set; }
+        public DateTime? QueuedAt { get; set; }
+        public DateTime? StartedAt { get; set; }
+        public DateTime? PausedAt { get; set; }
+        public DateTime? CompletedAt { get; set; }
+        public DateTime? AiReviewStartedAt { get; set; }
+        public DateTime? ClosedAt { get; set; }
+        public DateTime? CancelledAt { get; set; }
+        public DateTime? RejectedAt { get; set; }
+        public DateTime? ReworkRequestedAt { get; set; }
+
+        public ICollection<WorkOrderEvent> Events { get; set; } = new List<WorkOrderEvent>();
+        public ICollection<WorkOrderPhoto> Photos { get; set; } = new List<WorkOrderPhoto>();
+        public ICollection<MaterialWriteOff> Materials { get; set; } = new List<MaterialWriteOff>();
+        public ICollection<AiEvaluation> AiEvaluations { get; set; } = new List<AiEvaluation>();
     }
 }

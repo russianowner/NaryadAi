@@ -1,0 +1,20 @@
+.report-filters {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(150px, 1fr));
+    align-items: center;
+    gap: .85rem;
+}
+
+.report-action-btn { min-height: 56px; font-weight: 700; }
+.report-summary { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: .75rem; }
+.report-stat { display: flex; flex-direction: column; gap: .35rem; color: #596872; }
+.report-stat strong { color: #176b62; font-size: 1.6rem; }
+
+@media (max-width: 760px) {
+    .report-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .report-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 420px) {
+    .report-filters, .report-summary { grid-template-columns: 1fr; }
+}

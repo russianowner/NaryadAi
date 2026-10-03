@@ -1,28 +1,49 @@
-﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor;
 using NaryadAi.Data;
 using NaryadAi.Models;
+using NaryadAi.Services;
 
 namespace NaryadAi.Components.Pages.Master
 {
-    public partial class MasterPanel : ComponentBase
+    public partial class MasterPanel : ComponentBase, IDisposable
     {
         [Inject] private AppDbContext DbContext { get; set; } = default!;
         [Inject] private ProtectedLocalStorage BrowserStorage { get; set; } = default!;
         [Inject] private NavigationManager Navigation { get; set; } = default!;
         [Inject] private ISnackbar Snackbar { get; set; } = default!;
+        [Inject] private WorkOrderService WorkOrderService { get; set; } = default!;
+        [Inject] private WorkOrderChangeNotifier ChangeNotifier { get; set; } = default!;
 
         private bool isAuthorized = false;
         private int currentMasterId = 0;
+        private int refreshPending;
+        private bool suppressNotifierRefresh;
+        private bool disposed;
 
         // Модель для заполнения формы
         private WorkOrder newOrder = new WorkOrder { Type = "Плановый", Priority = "Обычный" };
+        private DateTime deadlineLocal = DateTime.Now.AddHours(24);
+        private string selectedStatus = "Все";
+        private readonly string[] boardStatuses = ["Выдан", "Принят в работу", "В очереди", "В работе", "Приостановлен", "Проверка ИИ", "На доработку", "Закрыт", "Отклонён"];
+        private readonly (string Title, string[] Statuses)[] boardLanes =
+        [
+            ("Выданы", ["Выдан", "Принят в работу", "В очереди"]),
+            ("Исполняются", ["В работе", "Приостановлен", "На доработку"]),
+            ("Проверка", ["Проверка ИИ"]),
+            ("Завершены", ["Закрыт", "Отклонён"])
+        ];
 
         // Списки для выпадающих меню
         private List<Equipment> equipmentList = new();
         private List<Employee> workers = new();
+        private List<WorkOrder> boardOrders = new();
+
+        private IEnumerable<WorkOrder> FilteredOrders => selectedStatus == "Все"
+            ? boardOrders
+            : boardOrders.Where(x => x.Status == selectedStatus);
 
         protected override async Task OnAfterRenderAsync(bool firstRender)
         {
@@ -38,8 +59,8 @@ namespace NaryadAi.Components.Pages.Master
                     currentMasterId = idResult.Value;
 
                     // Грузим списки из базы
-                    equipmentList = await DbContext.Equipments.OrderBy(e => e.Location).ToListAsync();
-                    workers = await DbContext.Employees.Where(e => e.Role == "Worker").ToListAsync();
+                    ChangeNotifier.Changed += OnWorkOrderChanged;
+                    await LoadData();
 
                     StateHasChanged();
                 }
@@ -48,6 +69,41 @@ namespace NaryadAi.Components.Pages.Master
                     Navigation.NavigateTo("/login");
                 }
             }
+        }
+
+        private async Task LoadData()
+        {
+            equipmentList = await DbContext.Equipments.AsNoTracking().Include(e => e.Site).OrderBy(e => e.Location).ToListAsync();
+            workers = await DbContext.Employees.AsNoTracking().Where(e => e.Role == "Worker").OrderBy(e => e.FullName).ToListAsync();
+            boardOrders = await DbContext.WorkOrders.AsNoTracking().Include(x => x.Equipment).Include(x => x.Executor)
+                .Include(x => x.AiEvaluations).OrderByDescending(x => x.CreatedAt).Take(200).ToListAsync();
+        }
+
+        private void OnWorkOrderChanged(WorkOrderUpdate update)
+        {
+            if (suppressNotifierRefresh || Interlocked.Exchange(ref refreshPending, 1) != 0)
+                return;
+
+            _ = InvokeAsync(async () =>
+            {
+                try
+                {
+                    await Task.Delay(50);
+                    if (disposed || !isAuthorized) return;
+                    await LoadData();
+                    StateHasChanged();
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref refreshPending, 0);
+                }
+            });
+        }
+
+        public void Dispose()
+        {
+            disposed = true;
+            ChangeNotifier.Changed -= OnWorkOrderChanged;
         }
 
         private async Task CreateOrder()
@@ -62,23 +118,112 @@ namespace NaryadAi.Components.Pages.Master
             // Вытаскиваем Участок из выбранного оборудования (согласно ТЗ)
             var eq = equipmentList.First(e => e.Id == newOrder.EquipmentId);
 
-            // Генерируем уникальный номер и заполняем системные поля
-            newOrder.Number = $"№{new Random().Next(1000, 9999)}";
-            newOrder.Location = eq.Location;
-            newOrder.Status = "Выдан";
-            newOrder.MasterId = currentMasterId;
-            newOrder.CreatedAt = DateTime.UtcNow;
-
-            // По ТЗ аварийный - 2 часа, плановый - 24 часа
-            newOrder.Deadline = newOrder.Priority == "Аварийный" ? DateTime.UtcNow.AddHours(2) : DateTime.UtcNow.AddHours(24);
-
-            DbContext.WorkOrders.Add(newOrder);
-            await DbContext.SaveChangesAsync();
+            newOrder.Location = eq.Site?.Name ?? eq.Location;
+            newOrder.Deadline = DateTime.SpecifyKind(deadlineLocal, DateTimeKind.Local).ToUniversalTime();
+            suppressNotifierRefresh = true;
+            try
+            {
+                await WorkOrderService.CreateAsync(newOrder, currentMasterId);
+            }
+            catch (InvalidOperationException ex)
+            {
+                Snackbar.Add(ex.Message, Severity.Warning);
+                return;
+            }
+            finally
+            {
+                suppressNotifierRefresh = false;
+            }
 
             Snackbar.Add($"Наряд {newOrder.Number} успешно выдан!", Severity.Success);
 
             // Очищаем форму для следующего наряда
             newOrder = new WorkOrder { Type = "Плановый", Priority = "Обычный" };
+            deadlineLocal = DateTime.Now.AddHours(24);
+            await LoadData();
         }
+
+        private async Task ApproveOrder(WorkOrder order)
+        {
+            suppressNotifierRefresh = true;
+            try
+            {
+                await WorkOrderService.ReviewByMasterAsync(order.Id, currentMasterId, true, "Подтверждено мастером.");
+                Snackbar.Add($"Наряд {order.Number} закрыт", Severity.Success);
+                await LoadData();
+            }
+            catch (InvalidOperationException ex) { Snackbar.Add(ex.Message, Severity.Warning); }
+            finally { suppressNotifierRefresh = false; }
+        }
+
+        private async Task ReturnForRework(WorkOrder order)
+        {
+            var explanation = order.AiEvaluations.OrderByDescending(x => x.EvaluatedAt).FirstOrDefault()?.Explanation;
+            suppressNotifierRefresh = true;
+            try
+            {
+                await WorkOrderService.ReviewByMasterAsync(order.Id, currentMasterId, false,
+                    string.IsNullOrWhiteSpace(explanation) ? "Требуется доработка по результату проверки." : explanation);
+                Snackbar.Add($"Наряд {order.Number} возвращён исполнителю", Severity.Info);
+                await LoadData();
+            }
+            catch (InvalidOperationException ex) { Snackbar.Add(ex.Message, Severity.Warning); }
+            finally { suppressNotifierRefresh = false; }
+        }
+
+        private readonly string[] priorities = ["Аварийный", "Высокий", "Обычный", "Плановый"];
+        private readonly Dictionary<int, int?> reassignTargets = new();
+        private readonly Dictionary<int, string> priorityTargets = new();
+
+        private int? GetReassignTarget(int orderId) => reassignTargets.GetValueOrDefault(orderId);
+
+        private async Task ReassignOrder(WorkOrder order)
+        {
+            if (GetReassignTarget(order.Id) is not int newExecutorId)
+            {
+                Snackbar.Add("Выберите нового исполнителя", Severity.Warning);
+                return;
+            }
+            suppressNotifierRefresh = true;
+            try
+            {
+                await WorkOrderService.ReassignAsync(order.Id, currentMasterId, newExecutorId, "Переназначено мастером.");
+                reassignTargets.Remove(order.Id);
+                Snackbar.Add($"Наряд {order.Number} переназначен", Severity.Success);
+                await LoadData();
+            }
+            catch (InvalidOperationException ex) { Snackbar.Add(ex.Message, Severity.Warning); }
+            finally { suppressNotifierRefresh = false; }
+        }
+
+        private async Task ChangePriority(WorkOrder order)
+        {
+            var priority = priorityTargets.GetValueOrDefault(order.Id) ?? order.Priority;
+            suppressNotifierRefresh = true;
+            try
+            {
+                await WorkOrderService.ChangePriorityAsync(order.Id, currentMasterId, priority, null);
+                priorityTargets.Remove(order.Id);
+                Snackbar.Add($"Приоритет наряда {order.Number}: {priority}", Severity.Success);
+                await LoadData();
+            }
+            catch (InvalidOperationException ex) { Snackbar.Add(ex.Message, Severity.Warning); }
+            finally { suppressNotifierRefresh = false; }
+        }
+
+        private static string WorkerStatusClass(string status) => status switch
+        {
+            "Свободен" => "worker-status-free",
+            "В работе" => "worker-status-busy",
+            "В очереди" => "worker-status-queue",
+            _ => "worker-status-off"
+        };
+
+        private static string StatusColor(string status) => status switch
+        {
+            "Закрыт" => "#2e7d32", "В работе" => "#ed9c18", "Отклонён" => "#d32f2f",
+            "В очереди" => "#1976d2", "На доработку" => "#ed6c02", "Проверка ИИ" => "#7b1fa2",
+            _ => "#607d8b"
+        };
     }
 }

@@ -1,25 +1,52 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.DataProtection;
 using MudBlazor.Services;
 using NaryadAi.Components;
 using NaryadAi.Data;
+using NaryadAi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddMudServices();
+builder.Services.AddSignalR();
+builder.Services.AddHttpClient();
+var dataProtectionKeysPath = builder.Configuration["DataProtection:KeysPath"];
+if (!string.IsNullOrWhiteSpace(dataProtectionKeysPath))
+{
+    Directory.CreateDirectory(dataProtectionKeysPath);
+    var dataProtection = builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
+    if (OperatingSystem.IsWindows() && builder.Configuration.GetValue<bool>("DataProtection:ProtectKeysWithDpapi"))
+        dataProtection.ProtectKeysWithDpapi();
+}
+builder.Services.AddScoped<AiReviewService>();
+builder.Services.AddScoped<WorkOrderService>();
+builder.Services.AddScoped<WorkOrderPhotoService>();
+builder.Services.AddScoped<EmployeeRatingService>();
+builder.Services.AddScoped<AppLanguageService>();
+builder.Services.AddScoped<ApiAccessTokenService>();
+builder.Services.AddSingleton<WorkOrderChangeNotifier>();
+builder.Services.AddHostedService<WorkOrderDeadlineMonitor>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
+var isDesignTime = app.Environment.IsEnvironment("DesignTime");
+if (!isDesignTime)
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.EnsureCreatedAsync();
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await db.Database.MigrateAsync();
+    }
 }
 
 // Configure the HTTP request pipeline.
@@ -37,18 +64,24 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+app.MapHub<WorkOrdersHub>("/hubs/work-orders");
 
-using (var scope = app.Services.CreateScope())
+if (!isDesignTime)
 {
-    var services = scope.ServiceProvider;
-    try
+    using (var scope = app.Services.CreateScope())
     {
-        var context = services.GetRequiredService<NaryadAi.Data.AppDbContext>(); 
-        NaryadAi.Data.DataSeeder.Initialize(context);
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Ошибка при инициализации БД: {ex.Message}");
+        var services = scope.ServiceProvider;
+        try
+        {
+            var context = services.GetRequiredService<NaryadAi.Data.AppDbContext>();
+            NaryadAi.Data.DataSeeder.Initialize(context);
+            if (app.Environment.IsDevelopment() && app.Configuration.GetValue<bool>("Seed:EnableDemoData"))
+                await NaryadAi.Data.DemoDataSeeder.InitializeAsync(context);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка при инициализации БД: {ex.Message}");
+        }
     }
 }
 

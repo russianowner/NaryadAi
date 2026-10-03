@@ -1,0 +1,73 @@
+@page "/reports"
+@using NaryadAi.Models
+
+<PageTitle>@Language.T("Отчёты") - НарядAI</PageTitle>
+
+@if (!isAuthorized)
+{
+    <div class="d-flex justify-center align-center" style="height: 100vh;">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+    </div>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4 pb-8">
+        <div class="d-flex flex-wrap align-center justify-space-between gap-3 mb-4">
+            <MudText Typo="Typo.h5" Class="font-weight-bold">@Language.T("Отчёты")</MudText>
+            <MudButton Href="/master" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ArrowBack" Class="report-action-btn">
+                @Language.T("К нарядам")
+            </MudButton>
+        </div>
+
+        <MudPaper Elevation="2" Class="pa-4 rounded-lg mb-4">
+            <MudText Typo="Typo.subtitle1" Class="font-weight-bold mb-3">@Language.T("Период отчёта")</MudText>
+            <div class="report-filters">
+                <MudDatePicker @bind-Date="startDate" Label="@Language.T("С даты")" Variant="Variant.Outlined" />
+                <MudDatePicker @bind-Date="endDate" Label="@Language.T("По дату")" Variant="Variant.Outlined" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" Disabled="isBusy"
+                           StartIcon="@Icons.Material.Filled.Search" Class="report-action-btn" OnClick="LoadReport">
+                    @Language.T("Показать")
+                </MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Large" Disabled="isBusy || reportOrders.Count == 0"
+                           StartIcon="@Icons.Material.Filled.FileDownload" Class="report-action-btn" OnClick="ExportExcel">
+                    @Language.T("Скачать Excel")
+                </MudButton>
+            </div>
+        </MudPaper>
+
+        @if (reportOrders.Count > 0)
+        {
+            <div class="report-summary">
+                <MudPaper Class="pa-4 report-stat"><span>@Language.T("Наряды")</span><strong>@reportOrders.Count</strong></MudPaper>
+                <MudPaper Class="pa-4 report-stat"><span>@Language.T("Закрыто")</span><strong>@reportOrders.Count(x => x.ClosedAt != null)</strong></MudPaper>
+                <MudPaper Class="pa-4 report-stat"><span>@Language.T("Просрочено")</span><strong>@reportOrders.Count(IsOverdue)</strong></MudPaper>
+                <MudPaper Class="pa-4 report-stat"><span>@Language.T("Оборудование в простое")</span><strong>@IdleEquipmentCount</strong></MudPaper>
+            </div>
+
+            <MudPaper Elevation="2" Class="pa-3 rounded-lg mt-4">
+                <MudTable Items="reportOrders" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
+                    <HeaderContent>
+                        <MudTh>@Language.T("Номер")</MudTh>
+                        <MudTh>@Language.T("Участок")</MudTh>
+                        <MudTh>@Language.T("Оборудование")</MudTh>
+                        <MudTh>@Language.T("Исполнитель")</MudTh>
+                        <MudTh>@Language.T("Статус")</MudTh>
+                        <MudTh>@Language.T("Срок")</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="@Language.T("Номер")">@context.Number</MudTd>
+                        <MudTd DataLabel="@Language.T("Участок")">@(context.Site?.Name ?? context.Location)</MudTd>
+                        <MudTd DataLabel="@Language.T("Оборудование")">@context.Equipment?.Name</MudTd>
+                        <MudTd DataLabel="@Language.T("Исполнитель")">@context.Executor?.FullName</MudTd>
+                        <MudTd DataLabel="@Language.T("Статус")">@Language.T(context.Status)</MudTd>
+                        <MudTd DataLabel="@Language.T("Срок")">@context.Deadline.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        }
+        else if (reportLoaded)
+        {
+            <MudAlert Severity="Severity.Info">@Language.T("За выбранный период нарядов нет")</MudAlert>
+        }
+    </MudContainer>
+}

@@ -58,9 +58,9 @@ else
                             {
                                 <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Large" Class="flex-grow-1 action-btn" OnClick="@(() => ChangeStatus(task, "Принят в работу"))">ПРИНЯТЬ</MudButton>
                                 <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Large" Class="flex-grow-1 action-btn" OnClick="@(() => ChangeStatus(task, "В очереди"))">В ОЧЕРЕДЬ</MudButton>
-                                <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" Class="mt-2" OnClick="@(() => OpenReasonForm(task, "Отклонен"))">Отклонить (с причиной)</MudButton>
+                                <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" Class="mt-2 action-btn" OnClick="@(() => OpenReasonForm(task, "Отклонён"))">Отклонить (с причиной)</MudButton>
                             }
-                            else if (task.Status == "Принят в работу" || task.Status == "В очереди" || task.Status == "Приостановлен")
+                            else if (task.Status == "Принят в работу" || task.Status == "В очереди" || task.Status == "Приостановлен" || task.Status == "На доработку")
                             {
                                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true" Class="action-btn" OnClick="@(() => ChangeStatus(task, "В работе"))">НАЧАТЬ ИСПОЛНЕНИЕ</MudButton>
                             }
@@ -78,7 +78,7 @@ else
         {
             <!-- ФОРМА УКАЗАНИЯ ПРИЧИНЫ (Отказ / Пауза) -->
             <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Class="mb-4" OnClick="BackToList">Назад</MudButton>
-            <MudText Typo="Typo.h5" Class="mb-4 font-weight-bold">@(pendingStatus == "Отклонен" ? "Отказ от наряда" : "Приостановка работ")</MudText>
+            <MudText Typo="Typo.h5" Class="mb-4 font-weight-bold">@(pendingStatus == "Отклонён" ? "Отказ от наряда" : "Приостановка работ")</MudText>
             
             <MudCard Elevation="2" Class="pa-4 rounded-lg">
                 <MudText Typo="Typo.body2" Class="mb-4">Укажите причину для наряда @selectedTask?.Number. Это обязательно по регламенту.</MudText>
@@ -105,17 +105,32 @@ else
                     }
                 </MudSelect>
 
-                <MudTextField @bind-Value="selectedTask.CloseComment" Label="Списанные материалы / Комментарий" Lines="2" Variant="Variant.Outlined" Class="mb-4" />
+                <MudTextField @bind-Value="selectedTask.CloseComment" Label="Комментарий к выполнению" Lines="2" Variant="Variant.Outlined" Class="mb-4" />
+
+                <MudText Typo="Typo.subtitle1" Class="mb-2">Списание материалов</MudText>
+                <div class="material-entry mb-2">
+                    <MudSelect T="string" @bind-Value="materialName" @bind-Value:after="UpdateMaterialUnit" Label="Материал" Variant="Variant.Outlined">
+                        @foreach (var material in materialItems)
+                        {
+                            <MudSelectItem T="string" Value="@material.Name">@material.Name (@material.Unit)</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudNumericField T="decimal" @bind-Value="materialQuantity" Label="Количество" Min="0.001m" Variant="Variant.Outlined" />
+                    <MudTextField Value="@materialUnit" Label="Единица" Variant="Variant.Outlined" Disabled="true" />
+                </div>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" Class="action-btn mb-2" OnClick="AddMaterial">ДОБАВИТЬ МАТЕРИАЛ</MudButton>
+                @foreach (var material in materialDraft)
+                {
+                    <MudChip T="string" Class="mb-2" OnClose="@(() => RemoveMaterial(material))">@material.Material — @material.Quantity @material.Unit</MudChip>
+                }
 
                 <!-- Фото обязательно для внеплановых работ по ТЗ -->
                 <div class="photo-upload-zone mb-4">
-                    <MudFileUpload T="IBrowserFile" Accept=".png, .jpg, .jpeg" OnFilesChanged="UploadPhoto">
-                        <ActivatorContent>
-                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.CameraAlt" FullWidth="true" Class="action-btn">
-                                @(string.IsNullOrEmpty(selectedTask.PhotoAfterPath) ? "СДЕЛАТЬ ФОТО (ПОСЛЕ)" : "ФОТО ЗАГРУЖЕНО")
-                            </MudButton>
-                        </ActivatorContent>
-                    </MudFileUpload>
+                    <label class="photo-picker action-btn">
+                        <MudIcon Icon="@Icons.Material.Filled.CameraAlt" />
+                        @(string.IsNullOrEmpty(selectedTask.PhotoAfterPath) ? "ВЫБРАТЬ ФОТО ПОСЛЕ" : "ФОТО СОХРАНЕНО")
+                        <InputFile OnChange="UploadPhoto" accept="image/png,image/jpeg,image/webp" />
+                    </label>
                     @if (selectedTask.Type == "Внеплановый")
                     {
                         <MudText Typo="Typo.caption" Color="Color.Error">Фото обязательно для аварийных работ</MudText>

@@ -1,4 +1,4 @@
-﻿@page "/master"
+@page "/master"
 @using NaryadAi.Models
 
 <PageTitle>Панель мастера - НарядAI</PageTitle>
@@ -25,6 +25,7 @@ else
                     <MudSelectItem Value="@("Обычный")">Обычный</MudSelectItem>
                     <MudSelectItem Value="@("Высокий")">Высокий</MudSelectItem>
                     <MudSelectItem Value="@("Аварийный")">Аварийный</MudSelectItem>
+                    <MudSelectItem Value="@("Плановый")">Плановый</MudSelectItem>
                 </MudSelect>
             </div>
 
@@ -42,13 +43,103 @@ else
             <MudSelect T="int?" @bind-Value="newOrder.ExecutorId" Label="Назначить исполнителя" Variant="Variant.Outlined" Class="mb-4" AnchorOrigin="Origin.BottomCenter">
                 @foreach (var w in workers)
                 {
-                    <MudSelectItem T="int?" Value="@w.Id">@w.FullName (@w.Specialty)</MudSelectItem>
+                    <MudSelectItem T="int?" Value="@w.Id">
+                        <span class="worker-option"><span class="worker-status-dot @WorkerStatusClass(w.Status)"></span>@w.FullName (@w.Specialty) — @w.Status</span>
+                    </MudSelectItem>
                 }
             </MudSelect>
 
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true" OnClick="CreateOrder" Style="height: 54px; border-radius: 12px; font-weight: bold;">
+            <label class="deadline-label" for="deadline">Срок выполнения</label>
+            <input id="deadline" class="deadline-input mb-4" type="datetime-local" @bind="deadlineLocal" />
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true" OnClick="CreateOrder" Class="master-action-btn">
                 ВЫДАТЬ НАРЯД
             </MudButton>
         </MudCard>
+
+        <section class="orders-board mt-6">
+            <div class="board-heading">
+                <div>
+                    <MudText Typo="Typo.h5" Class="font-weight-bold">Наряды</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Обновите список кнопкой фильтра или перезагрузкой страницы</MudText>
+                </div>
+                <MudSelect T="string" @bind-Value="selectedStatus" Label="Фильтр по статусу" Variant="Variant.Outlined" Class="board-filter">
+                    <MudSelectItem Value="@("Все")">Все статусы</MudSelectItem>
+                    @foreach (var status in boardStatuses)
+                    {
+                        <MudSelectItem Value="@status">@status</MudSelectItem>
+                    }
+                </MudSelect>
+            </div>
+
+            <div class="board-columns">
+                @foreach (var lane in boardLanes)
+                {
+                    var laneOrders = FilteredOrders.Where(x => lane.Statuses.Contains(x.Status)).ToList();
+                    <section class="board-lane">
+                        <header><strong>@lane.Title</strong><span>@laneOrders.Count</span></header>
+                        @foreach (var order in laneOrders)
+                        {
+                            <article class="board-order">
+                                <div class="board-order-top">
+                                    <strong>@order.Number</strong>
+                                    <span class="board-status" style="--status-color:@StatusColor(order.Status)">@order.Status</span>
+                                </div>
+                                <div class="board-order-equipment">@(order.Equipment?.Name ?? "Оборудование") · @order.Location</div>
+                                <div class="board-order-description">@order.Description</div>
+                                <div class="board-order-meta">Исполнитель: @(order.Executor?.FullName ?? "не назначен")</div>
+                                <div class="board-order-meta">Срок: @order.Deadline.ToLocalTime().ToString("dd.MM HH:mm")</div>
+                                @if (order.Status is "Выдан" or "Принят в работу" or "В очереди" or "Приостановлен" or "На доработку" or "Отклонён")
+                                {
+                                    <div class="order-manage-box">
+                                        <MudSelect T="int?" Value="@GetReassignTarget(order.Id)" ValueChanged="@(v => reassignTargets[order.Id] = v)"
+                                                   Label="Другой исполнитель" Variant="Variant.Outlined" Dense="false" Class="mt-2">
+                                            @foreach (var w in workers.Where(w => w.Id != order.ExecutorId))
+                                            {
+                                                <MudSelectItem T="int?" Value="@w.Id">@w.FullName — @w.Status</MudSelectItem>
+                                            }
+                                        </MudSelect>
+                                        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="master-action-btn mt-2"
+                                                   OnClick="@(() => ReassignOrder(order))">ПЕРЕНАЗНАЧИТЬ</MudButton>
+                                    </div>
+                                }
+                                @if (order.Status is not ("Закрыт" or "Проверка ИИ" or "Отклонён"))
+                                {
+                                    <div class="order-manage-box">
+                                        <MudSelect T="string" Value="@(priorityTargets.GetValueOrDefault(order.Id) ?? order.Priority)"
+                                                   ValueChanged="@(v => priorityTargets[order.Id] = v)"
+                                                   Label="Приоритет" Variant="Variant.Outlined" Class="mt-2">
+                                            @foreach (var p in priorities)
+                                            {
+                                                <MudSelectItem Value="@p">@p</MudSelectItem>
+                                            }
+                                        </MudSelect>
+                                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" Class="master-action-btn mt-2"
+                                                   OnClick="@(() => ChangePriority(order))">СМЕНИТЬ ПРИОРИТЕТ</MudButton>
+                                    </div>
+                                }
+                                @if (order.Status is "Проверка ИИ" or "На доработку")
+                                {
+                                    var evaluation = order.AiEvaluations.OrderByDescending(x => x.EvaluatedAt).FirstOrDefault();
+                                    <div class="ai-review-box">
+                                        <strong>ИИ: @(evaluation?.Verdict ?? "проверка") · @(evaluation?.Score.ToString("0") ?? "—")/100</strong>
+                                        <span>@(evaluation?.Explanation ?? "Оценка готовится")</span>
+                                        <MudButton Variant="Variant.Filled" Color="Color.Success" FullWidth="true" Class="master-action-btn mt-2" OnClick="@(() => ApproveOrder(order))">ПРИНЯТЬ И ЗАКРЫТЬ</MudButton>
+                                        @if (order.Status == "Проверка ИИ")
+                                        {
+                                            <MudButton Variant="Variant.Outlined" Color="Color.Warning" FullWidth="true" Class="master-action-btn mt-2" OnClick="@(() => ReturnForRework(order))">ВЕРНУТЬ НА ДОРАБОТКУ</MudButton>
+                                        }
+                                    </div>
+                                }
+                            </article>
+                        }
+                        @if (laneOrders.Count == 0)
+                        {
+                            <div class="board-empty">Нарядов нет</div>
+                        }
+                    </section>
+                }
+            </div>
+        </section>
     </MudContainer>
 }
