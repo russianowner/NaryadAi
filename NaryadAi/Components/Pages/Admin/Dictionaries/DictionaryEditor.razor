@@ -1,0 +1,28 @@
+﻿@using NaryadAi.Models
+@using NaryadAi.Data
+@using Microsoft.EntityFrameworkCore
+@inject AppDbContext DbContext
+@inject ISnackbar Snackbar
+
+<div class="d-flex gap-4 mb-6">
+    <MudTextField @bind-Value="newItemName" Label="@($"Новая {CategoryName.ToLower()}")" Variant="Variant.Outlined" Margin="Margin.Dense" />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" DisableElevation="true" OnClick="AddItem">
+        Добавить
+    </MudButton>
+</div>
+
+<MudTable Items="@items" Hover="true" Elevation="0" Outlined="true" Class="rounded-lg">
+    <HeaderContent>
+        <MudTh>Наименование</MudTh>
+        <MudTh Style="width: 100px; text-align: center;">Действия</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Наименование">@context.Name</MudTd>
+        <MudTd DataLabel="Действия" Style="text-align: center;">
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteItem(context))" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Typo="Typo.body2" Class="pa-4 text-muted">Список пуст</MudText>
+    </NoRecordsContent>
+</MudTable>

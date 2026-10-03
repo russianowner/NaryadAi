@@ -1,0 +1,75 @@
+﻿@page "/login"
+@rendermode InteractiveServer
+@layout NaryadAi.Components.Layout.EmptyLayout
+
+<PageTitle>@GetText("LoginTitle")</PageTitle>
+
+<div class="auth-wrapper">
+    <div class="lang-switcher">
+        <MudToggleGroup T="string" @bind-Value="CurrentLang" Color="Color.Primary" SelectionMode="SelectionMode.SingleSelection">
+            <MudToggleItem Value="@("RU")" Text="RU" />
+            <MudToggleItem Value="@("KZ")" Text="KZ" />
+        </MudToggleGroup>
+    </div>
+
+    <div class="auth-header">
+        <div class="logo-circle">
+            <MudIcon Icon="@Icons.Material.Filled.Engineering" Color="Color.Surface" Size="Size.Large" />
+        </div>
+        <h1 class="app-title">НарядAI</h1>
+        <p class="app-subtitle">@GetText("CompanyName")</p>
+    </div>
+
+    <div class="auth-tabs">
+        <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pt-4" Centered="true">
+            <MudTabPanel Text="@GetText("PinTab")">
+                <div class="pin-display">
+                    <p class="pin-instruction">@GetText("EnterPin")</p>
+                    <div class="dots-container">
+                        @for (int i = 0; i < 4; i++)
+                        {
+                            <div class="pin-dot @(enteredPin.Length > i ? "filled" : "")"></div>
+                        }
+                    </div>
+                    <p class="error-text @(showError ? "visible" : "")">@GetText("ErrorPin")</p>
+                </div>
+
+                <div class="numpad">
+                    <div class="numpad-row">
+                        <button class="num-btn" @onclick='() => AddDigit("1")'>1</button>
+                        <button class="num-btn" @onclick='() => AddDigit("2")'>2</button>
+                        <button class="num-btn" @onclick='() => AddDigit("3")'>3</button>
+                    </div>
+                    <div class="numpad-row">
+                        <button class="num-btn" @onclick='() => AddDigit("4")'>4</button>
+                        <button class="num-btn" @onclick='() => AddDigit("5")'>5</button>
+                        <button class="num-btn" @onclick='() => AddDigit("6")'>6</button>
+                    </div>
+                    <div class="numpad-row">
+                        <button class="num-btn" @onclick='() => AddDigit("7")'>7</button>
+                        <button class="num-btn" @onclick='() => AddDigit("8")'>8</button>
+                        <button class="num-btn" @onclick='() => AddDigit("9")'>9</button>
+                    </div>
+                    <div class="numpad-row">
+                        <button class="num-btn empty"></button>
+                        <button class="num-btn" @onclick='() => AddDigit("0")'>0</button>
+                        <button class="num-btn delete-btn" @onclick="RemoveDigit">
+                            <MudIcon Icon="@Icons.Material.Filled.Backspace" />
+                        </button>
+                    </div>
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="@GetText("LoginTab")">
+                <div class="login-form-container">
+                    <MudTextField @bind-Value="username" Label="@GetText("LoginLabel")" Variant="Variant.Outlined" Class="mb-4" />
+                    <MudTextField @bind-Value="password" Label="@GetText("PasswordLabel")" Variant="Variant.Outlined" InputType="InputType.Password" Class="mb-6" />
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true" OnClick="ValidateLogin">
+                        @GetText("LoginButton")
+                    </MudButton>
+                    <p class="error-text mt-2 @(showLoginError ? "visible" : "")">@GetText("ErrorLogin")</p>
+                </div>
+            </MudTabPanel>
+        </MudTabs>
+    </div>
+</div>

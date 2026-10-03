@@ -9,5 +9,7 @@ namespace NaryadAi.Data
         public DbSet<Employee> Employees { get; set; }
         public DbSet<Equipment> Equipments { get; set; }
         public DbSet<WorkOrder> WorkOrders { get; set; }
+
+        public DbSet<ReferenceItem> ReferenceItems { get; set; }
     }
 }

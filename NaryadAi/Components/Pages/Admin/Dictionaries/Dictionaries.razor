@@ -1,0 +1,27 @@
+﻿@page "/admin/dictionaries"
+@rendermode InteractiveServer
+@using NaryadAi.Models
+@using NaryadAi.Data
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Справочники - НарядAI</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-6" Style="font-weight: 700; color: #2c3e50;">Управление справочниками</MudText>
+
+    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" Color="Color.Primary">
+        
+        <MudTabPanel Text="Специальности" Icon="@Icons.Material.Filled.Work">
+            <DictionaryEditor Category="Specialty" CategoryName="Специальность" />
+        </MudTabPanel>
+
+        <MudTabPanel Text="Смены" Icon="@Icons.Material.Filled.Schedule">
+            <DictionaryEditor Category="Shift" CategoryName="Смена" />
+        </MudTabPanel>
+
+        <MudTabPanel Text="Бригады" Icon="@Icons.Material.Filled.Groups">
+            <DictionaryEditor Category="Brigade" CategoryName="Бригада" />
+        </MudTabPanel>
+
+    </MudTabs>
+</MudContainer>

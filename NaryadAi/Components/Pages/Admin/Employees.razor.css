@@ -1,0 +1,32 @@
+﻿::deep .rounded-lg {
+    border-radius: 12px !important;
+}
+
+::deep .mud-toolbar .mud-input-control {
+    max-width: 300px;
+}
+
+::deep .mud-table-row {
+    transition: background-color 0.2s ease;
+}
+
+    ::deep .mud-table-row:hover {
+        background-color: #f8fbff !important;
+    }
+
+::deep .mud-table-head {
+    background-color: #ffffff;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+    ::deep .mud-table-head .mud-table-cell {
+        font-weight: 700;
+        color: #455a64;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+
+::deep .mud-table-pagination {
+    border-top: 1px solid #f0f0f0;
+}

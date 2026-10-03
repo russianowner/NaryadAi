@@ -1,7 +1,51 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Панель мастера</PageTitle>
 
-<h1>Hello, world!</h1>
+<MudText Typo="Typo.h4" Class="mb-4">Смена: 3 октября 2026</MudText>
 
-Welcome to your new app.
+<MudGrid>
+    <MudItem xs="12" sm="4">
+        <MudPaper Class="pa-4" Elevation="2" Style="background-color: #f5f5f5;">
+            <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-3">Выдано</MudText>
+
+            <MudCard Class="mb-3">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle1"><b>Наряд #147</b></MudText>
+                    <MudText Typo="Typo.body2">Оборудование: Дробилка КМД-1750</MudText>
+                    <MudText Typo="Typo.body2">Участок: Дробление</MudText>
+                    <MudChip T="string" Color="Color.Error" Size="Size.Small" Class="mt-2">Аварийный</MudChip>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Variant="Variant.Text" Color="Color.Primary">Подробнее</MudButton>
+                </MudCardActions>
+            </MudCard>
+
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" sm="4">
+        <MudPaper Class="pa-4" Elevation="2" Style="background-color: #f5f5f5;">
+            <MudText Typo="Typo.h6" Color="Color.Info" Class="mb-3">В работе</MudText>
+
+            <MudCard Class="mb-3">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle1"><b>Наряд #145</b></MudText>
+                    <MudText Typo="Typo.body2">Оборудование: Конвейер К-3</MudText>
+                    <MudText Typo="Typo.body2">Исполнитель: Ахметов Е.</MudText>
+                    <MudChip T="string" Color="Color.Warning" Size="Size.Small" Class="mt-2">В работе 45 мин</MudChip>
+                </MudCardContent>
+            </MudCard>
+
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" sm="4">
+        <MudPaper Class="pa-4" Elevation="2" Style="background-color: #f5f5f5;">
+            <MudText Typo="Typo.h6" Color="Color.Success" Class="mb-3">Выполнено</MudText>
+
+            <!-- наряды будущие сюда падают -->
+
+        </MudPaper>
+    </MudItem>
+</MudGrid>

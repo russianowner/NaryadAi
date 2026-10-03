@@ -1,0 +1,126 @@
+﻿.auth-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #f5f7fa;
+    padding: 16px;
+}
+
+.lang-switcher {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.logo-circle {
+    width: 64px;
+    height: 64px;
+    background-color: #1976d2;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+}
+
+.app-title {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 0;
+}
+
+.app-subtitle {
+    color: #666;
+    margin: 0;
+    font-size: 14px;
+}
+
+.pin-display {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.pin-instruction {
+    font-size: 16px;
+    margin-bottom: 12px;
+}
+
+.dots-container {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.pin-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid #bdbdbd;
+    transition: 0.2s;
+}
+
+    .pin-dot.filled {
+        background-color: #1976d2;
+        border-color: #1976d2;
+    }
+
+.error-text {
+    color: #f44336;
+    font-size: 14px;
+    opacity: 0;
+    height: 20px;
+    text-align: center;
+}
+
+    .error-text.visible {
+        opacity: 1;
+    }
+
+.numpad {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.numpad-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.num-btn {
+    flex: 1;
+    aspect-ratio: 1.2;
+    background-color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 26px;
+    font-weight: 500;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    cursor: pointer;
+}
+
+    .num-btn:active {
+        background-color: #e0e0e0;
+        transform: scale(0.95);
+    }
+
+    .num-btn.empty {
+        background: transparent;
+        box-shadow: none;
+        pointer-events: none;
+    }
+
+.login-form-container {
+    max-width: 320px;
+    margin: 0 auto;
+    padding-top: 20px;
+}
