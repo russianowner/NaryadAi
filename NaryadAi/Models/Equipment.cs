@@ -8,5 +8,7 @@
         public string Location { get; set; } = string.Empty; 
         public string Type { get; set; } = string.Empty;
         public string Criticality { get; set; } = "Высокая";
+        public int? SiteId { get; set; }
+        public Site? Site { get; set; }
     }
 }
