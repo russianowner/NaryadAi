@@ -1,27 +1,36 @@
 ﻿@page "/admin/dictionaries"
-@rendermode InteractiveServer
 @using NaryadAi.Models
 @using NaryadAi.Data
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@inject ProtectedLocalStorage BrowserStorage
+@inject NavigationManager Navigation
 
 <PageTitle>Справочники - НарядAI</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
-    <MudText Typo="Typo.h4" Class="mb-6" Style="font-weight: 700; color: #2c3e50;">Управление справочниками</MudText>
+@if (!isAuthorized)
+{
+    <div class="d-flex justify-center align-center" style="height: 100vh;">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+    </div>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+        <MudText Typo="Typo.h4" Class="mb-6" Style="font-weight: 700; color: #2c3e50;">Управление справочниками</MudText>
 
-    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" Color="Color.Primary">
-        
-        <MudTabPanel Text="Специальности" Icon="@Icons.Material.Filled.Work">
-            <DictionaryEditor Category="Specialty" CategoryName="Специальность" />
-        </MudTabPanel>
+        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" Color="Color.Primary">
+            <MudTabPanel Text="Специальности" Icon="@Icons.Material.Filled.Work">
+                <DictionaryEditor Category="Specialty" CategoryName="Специальность" />
+            </MudTabPanel>
 
-        <MudTabPanel Text="Смены" Icon="@Icons.Material.Filled.Schedule">
-            <DictionaryEditor Category="Shift" CategoryName="Смена" />
-        </MudTabPanel>
+            <MudTabPanel Text="Смены" Icon="@Icons.Material.Filled.Schedule">
+                <DictionaryEditor Category="Shift" CategoryName="Смена" />
+            </MudTabPanel>
 
-        <MudTabPanel Text="Бригады" Icon="@Icons.Material.Filled.Groups">
-            <DictionaryEditor Category="Brigade" CategoryName="Бригада" />
-        </MudTabPanel>
-
-    </MudTabs>
-</MudContainer>
+            <MudTabPanel Text="Бригады" Icon="@Icons.Material.Filled.Groups">
+                <DictionaryEditor Category="Brigade" CategoryName="Бригада" />
+            </MudTabPanel>
+        </MudTabs>
+    </MudContainer>
+}

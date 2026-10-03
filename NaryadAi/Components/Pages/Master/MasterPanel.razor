@@ -1,0 +1,54 @@
+﻿@page "/master"
+@using NaryadAi.Models
+
+<PageTitle>Панель мастера - НарядAI</PageTitle>
+
+@if (!isAuthorized)
+{
+    <div class="d-flex justify-center align-center" style="height: 100vh;">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+    </div>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4 pb-8">
+        <MudText Typo="Typo.h5" Class="mb-6 font-weight-bold" Color="Color.Primary">Выдача нового наряда</MudText>
+
+        <MudCard Elevation="3" Class="rounded-lg pa-4">
+            <div class="d-flex gap-4 mb-4">
+                <MudSelect T="string" @bind-Value="newOrder.Type" Label="Тип работ" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("Плановый")">Плановый</MudSelectItem>
+                    <MudSelectItem Value="@("Внеплановый")">Внеплановый</MudSelectItem>
+                </MudSelect>
+
+                <MudSelect T="string" @bind-Value="newOrder.Priority" Label="Приоритет" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("Обычный")">Обычный</MudSelectItem>
+                    <MudSelectItem Value="@("Высокий")">Высокий</MudSelectItem>
+                    <MudSelectItem Value="@("Аварийный")">Аварийный</MudSelectItem>
+                </MudSelect>
+            </div>
+
+            <MudTextField @bind-Value="newOrder.Description" Label="Описание проблемы" Lines="3" Variant="Variant.Outlined" Class="mb-4" />
+
+            <!-- Выбор оборудования тянется из базы -->
+            <MudSelect T="int" @bind-Value="newOrder.EquipmentId" Label="Оборудование" Variant="Variant.Outlined" Class="mb-4" AnchorOrigin="Origin.BottomCenter">
+                @foreach (var eq in equipmentList)
+                {
+                    <MudSelectItem Value="@eq.Id">@eq.Name (@eq.Location)</MudSelectItem>
+                }
+            </MudSelect>
+
+            <!-- Выбор только Слесарей из базы -->
+            <MudSelect T="int?" @bind-Value="newOrder.ExecutorId" Label="Назначить исполнителя" Variant="Variant.Outlined" Class="mb-4" AnchorOrigin="Origin.BottomCenter">
+                @foreach (var w in workers)
+                {
+                    <MudSelectItem T="int?" Value="@w.Id">@w.FullName (@w.Specialty)</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true" OnClick="CreateOrder" Style="height: 54px; border-radius: 12px; font-weight: bold;">
+                ВЫДАТЬ НАРЯД
+            </MudButton>
+        </MudCard>
+    </MudContainer>
+}

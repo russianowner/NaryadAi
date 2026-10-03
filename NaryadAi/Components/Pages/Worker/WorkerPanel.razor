@@ -1,0 +1,131 @@
+﻿@page "/worker"
+@using NaryadAi.Models
+
+<PageTitle>Мои наряды - НарядAI</PageTitle>
+
+@if (!isAuthorized)
+{
+    <div class="d-flex justify-center align-center" style="height: 100vh;">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+    </div>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Small" Class="pa-2 pb-16">
+        
+        @if (currentView == "List")
+        {
+            <MudText Typo="Typo.h5" Class="mb-4 font-weight-bold">Мои задачи</MudText>
+
+            @if (!myTasks.Any())
+            {
+                <div class="empty-state">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircleOutline" Size="Size.Large" Color="Color.Success" />
+                    <MudText Typo="Typo.h6" Class="mt-2">Нет активных нарядов</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Мастер пока ничего не назначил.</MudText>
+                </div>
+            }
+            else
+            {
+                @foreach (var task in myTasks)
+                {
+                    bool isEmergency = task.Priority.Contains("Аварийный") || task.Type == "Внеплановый";
+                    string cardClass = isEmergency ? "emergency-card mb-4" : "standard-card mb-4";
+
+                    <MudCard Elevation="2" Class="@cardClass">
+                        <MudCardHeader Class="pb-2">
+                            <CardHeaderContent>
+                                <div class="d-flex justify-space-between align-center">
+                                    <MudText Typo="Typo.subtitle1" Style="font-weight: 700;">Наряд @task.Number</MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="@(isEmergency ? Color.Error : Color.Primary)" Variant="Variant.Filled">
+                                        @task.Status
+                                    </MudChip>
+                                </div>
+                                <MudText Typo="Typo.caption" Color="@(isEmergency ? Color.Error : Color.Secondary)">
+                                    Срок до: @task.Deadline.ToString("HH:mm")
+                                </MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+
+                        <MudCardContent Class="pt-0 pb-2">
+                            <div class="info-row"><MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" /> <b>Участок:</b> @task.Location</div>
+                            <div class="info-row"><MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" /> <b>Оборудование:</b> @task.Equipment?.Name</div>
+                            <MudText Typo="Typo.body2" Class="mt-2 task-desc">@task.Description</MudText>
+                        </MudCardContent>
+
+                        <MudCardActions Class="d-flex flex-wrap gap-2 pa-3">
+                            @if (task.Status == "Выдан")
+                            {
+                                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Large" Class="flex-grow-1 action-btn" OnClick="@(() => ChangeStatus(task, "Принят в работу"))">ПРИНЯТЬ</MudButton>
+                                <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Large" Class="flex-grow-1 action-btn" OnClick="@(() => ChangeStatus(task, "В очереди"))">В ОЧЕРЕДЬ</MudButton>
+                                <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" Class="mt-2" OnClick="@(() => OpenReasonForm(task, "Отклонен"))">Отклонить (с причиной)</MudButton>
+                            }
+                            else if (task.Status == "Принят в работу" || task.Status == "В очереди" || task.Status == "Приостановлен")
+                            {
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true" Class="action-btn" OnClick="@(() => ChangeStatus(task, "В работе"))">НАЧАТЬ ИСПОЛНЕНИЕ</MudButton>
+                            }
+                            else if (task.Status == "В работе")
+                            {
+                                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Large" Class="flex-grow-1 action-btn" OnClick="@(() => OpenCloseForm(task))">ИСПОЛНЕНО</MudButton>
+                                <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Large" Class="flex-grow-1 action-btn" OnClick="@(() => OpenReasonForm(task, "Приостановлен"))">ПАУЗА</MudButton>
+                            }
+                        </MudCardActions>
+                    </MudCard>
+                }
+            }
+        }
+        else if (currentView == "Reason")
+        {
+            <!-- ФОРМА УКАЗАНИЯ ПРИЧИНЫ (Отказ / Пауза) -->
+            <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Class="mb-4" OnClick="BackToList">Назад</MudButton>
+            <MudText Typo="Typo.h5" Class="mb-4 font-weight-bold">@(pendingStatus == "Отклонен" ? "Отказ от наряда" : "Приостановка работ")</MudText>
+            
+            <MudCard Elevation="2" Class="pa-4 rounded-lg">
+                <MudText Typo="Typo.body2" Class="mb-4">Укажите причину для наряда @selectedTask?.Number. Это обязательно по регламенту.</MudText>
+                <MudTextField @bind-Value="actionReason" Label="Причина" Lines="3" Variant="Variant.Outlined" Class="mb-4" AutoFocus="true" />
+                
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true" Class="action-btn" OnClick="ConfirmReasonAction">
+                    ПОДТВЕРДИТЬ
+                </MudButton>
+            </MudCard>
+        }
+        else if (currentView == "CloseForm")
+        {
+            <!-- ФОРМА ЗАКРЫТИЯ НАРЯДА (п. 5.3 ТЗ) -->
+            <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Class="mb-4" OnClick="BackToList">Назад</MudButton>
+            <MudText Typo="Typo.h5" Class="mb-4 font-weight-bold">Закрытие наряда @selectedTask?.Number</MudText>
+
+            <MudCard Elevation="2" Class="pa-4 rounded-lg mb-4">
+                <MudTextField @bind-Value="selectedTask!.CloseWorksDone" Label="Выполненные работы" Lines="2" Variant="Variant.Outlined" Class="mb-4" />
+                
+                <MudSelect T="string" @bind-Value="selectedTask.CloseFaultCode" Label="Шифр неисправности" Variant="Variant.Outlined" Class="mb-4">
+                    @foreach (var fault in faultCodes)
+                    {
+                        <MudSelectItem T="string" Value="@fault.Name">@fault.Name</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudTextField @bind-Value="selectedTask.CloseComment" Label="Списанные материалы / Комментарий" Lines="2" Variant="Variant.Outlined" Class="mb-4" />
+
+                <!-- Фото обязательно для внеплановых работ по ТЗ -->
+                <div class="photo-upload-zone mb-4">
+                    <MudFileUpload T="IBrowserFile" Accept=".png, .jpg, .jpeg" OnFilesChanged="UploadPhoto">
+                        <ActivatorContent>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.CameraAlt" FullWidth="true" Class="action-btn">
+                                @(string.IsNullOrEmpty(selectedTask.PhotoAfterPath) ? "СДЕЛАТЬ ФОТО (ПОСЛЕ)" : "ФОТО ЗАГРУЖЕНО")
+                            </MudButton>
+                        </ActivatorContent>
+                    </MudFileUpload>
+                    @if (selectedTask.Type == "Внеплановый")
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Error">Фото обязательно для аварийных работ</MudText>
+                    }
+                </div>
+
+                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Large" FullWidth="true" Class="action-btn" OnClick="ConfirmCloseTask">
+                    ОТПРАВИТЬ НА ПРОВЕРКУ
+                </MudButton>
+            </MudCard>
+        }
+    </MudContainer>
+}

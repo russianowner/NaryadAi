@@ -4,141 +4,151 @@
 
 <PageTitle>Управление персоналом - НарядAI</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4 pb-8">
-    <div class="d-flex justify-space-between align-center mb-6">
-        <div>
-            <MudText Typo="Typo.h4" Style="font-weight: 700; color: #2c3e50;">Справочник сотрудников</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">Управление учетными записями, ролями и бригадами</MudText>
-        </div>
+@if (!isAuthorized)
+{
+    <div class="d-flex justify-center align-center" style="height: 100vh;">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
     </div>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4 pb-8">
+        <div class="d-flex justify-space-between align-center mb-6">
+            <div>
+                <MudText Typo="Typo.h4" Style="font-weight: 700; color: #2c3e50;">Справочник сотрудников</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Управление учетными записями, ролями и бригадами</MudText>
+            </div>
+        </div>
 
-    <MudGrid>
-        <MudItem xs="12" md="4">
-            <MudCard Elevation="3" Class="rounded-lg">
-                <MudCardHeader Style="background-color: #f8f9fa; border-bottom: 1px solid #e0e0e0;">
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6" Style="font-weight: 600;">
-                            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="mr-2 mb-n1" Color="Color.Primary" />
-                            Новый сотрудник
-                        </MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent Class="pt-4">
-                    <MudSelect T="string" @bind-Value="newEmployee.Role" Label="Роль в системе" Variant="Variant.Outlined" Class="mb-4" AdornmentColor="Color.Primary">
-                        <MudSelectItem T="string" Value="@("Worker")">Слесарь (Исполнитель)</MudSelectItem>
-                        <MudSelectItem T="string" Value="@("Master")">Мастер смены</MudSelectItem>
-                        <MudSelectItem T="string" Value="@("Manager")">Руководитель (Аналитика)</MudSelectItem>
-                        <MudSelectItem T="string" Value="@("Admin")">Администратор</MudSelectItem>
-                    </MudSelect>
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudCard Elevation="3" Class="rounded-lg">
+                    <MudCardHeader Style="background-color: #f8f9fa; border-bottom: 1px solid #e0e0e0;">
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6" Style="font-weight: 600;">
+                                <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="mr-2 mb-n1" Color="Color.Primary" />
+                                Новый сотрудник
+                            </MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent Class="pt-4">
+                        <MudSelect T="string" @bind-Value="newEmployee.Role" Label="Роль в системе" Variant="Variant.Outlined" Class="mb-4" AdornmentColor="Color.Primary">
+                            <MudSelectItem T="string" Value="@("Worker")">Слесарь (Исполнитель)</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("Master")">Мастер смены</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("Manager")">Руководитель (Аналитика)</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("Admin")">Администратор</MudSelectItem>
+                        </MudSelect>
 
-                    <MudTextField @bind-Value="newEmployee.FullName" Label="ФИО" Variant="Variant.Outlined" Class="mb-4" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Badge" />
+                        <MudTextField @bind-Value="newEmployee.FullName" Label="ФИО" Variant="Variant.Outlined" Class="mb-4" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Badge" />
 
-                    <MudSelect T="string" @bind-Value="newEmployee.Specialty" Label="Специальность" Variant="Variant.Outlined" Class="mb-4">
-                        @foreach (var spec in specialties)
-                        {
-                            <MudSelectItem T="string" Value="@spec.Name">@spec.Name</MudSelectItem>
-                        }
-                    </MudSelect>
-
-                    @if (newEmployee.Role == "Worker" || newEmployee.Role == "Master")
-                    {
-                        <MudSelect T="string" @bind-Value="newEmployee.Shift" Label="Смена" Variant="Variant.Outlined" Class="mb-4">
-                            @foreach (var shift in shifts)
+                        <MudSelect T="string" @bind-Value="newEmployee.Specialty" Label="Специальность" Variant="Variant.Outlined" Class="mb-4">
+                            @foreach (var spec in specialties)
                             {
-                                <MudSelectItem T="string" Value="@shift.Name">@shift.Name</MudSelectItem>
+                                <MudSelectItem T="string" Value="@spec.Name">@spec.Name</MudSelectItem>
                             }
                         </MudSelect>
 
-                        <MudTextField @bind-Value="newEmployee.PinCode" Label="ПИН-код (4 цифры)" Variant="Variant.Outlined" MaxLength="4" Class="mb-4" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Dialpad" />
-                    }
-
-                    @if (newEmployee.Role == "Worker")
-                    {
-                        <div class="d-flex gap-4 mb-4">
-                            <MudSelect T="string" @bind-Value="newEmployee.Brigade" Label="Бригада" Variant="Variant.Outlined">
-                                @foreach (var brigade in brigades)
+                        @if (newEmployee.Role == "Worker" || newEmployee.Role == "Master")
+                        {
+                            <MudSelect T="string" @bind-Value="newEmployee.Shift" Label="Смена" Variant="Variant.Outlined" Class="mb-4">
+                                @foreach (var shift in shifts)
                                 {
-                                    <MudSelectItem T="string" Value="@brigade.Name">@brigade.Name</MudSelectItem>
+                                    <MudSelectItem T="string" Value="@shift.Name">@shift.Name</MudSelectItem>
                                 }
                             </MudSelect>
-                            <MudNumericField @bind-Value="newEmployee.Grade" Label="Разряд" Variant="Variant.Outlined" Min="1" Max="6" />
-                        </div>
-                    }
 
-                    @if (newEmployee.Role == "Admin" || newEmployee.Role == "Manager")
-                    {
-                        <MudTextField @bind-Value="newEmployee.Login" Label="Логин" Variant="Variant.Outlined" Class="mb-4" />
-                        <MudTextField @bind-Value="newEmployee.PasswordHash" Label="Пароль" Variant="Variant.Outlined" Class="mb-4" InputType="InputType.Password" />
-                    }
-                </MudCardContent>
-                <MudCardActions Class="pa-4 pt-0">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true" OnClick="SaveEmployee" DisableElevation="true">
-                        СОЗДАТЬ УЧЕТНУЮ ЗАПИСЬ
-                    </MudButton>
-                </MudCardActions>
-            </MudCard>
-        </MudItem>
+                            <MudTextField @bind-Value="newEmployee.PinCode" Label="ПИН-код (4 цифры)" Variant="Variant.Outlined" MaxLength="4" Class="mb-4" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Dialpad" />
+                        }
 
-        <MudItem xs="12" md="8">
-            <MudTable Items="@employees" Hover="true" Elevation="3" Class="rounded-lg" Filter="new Func<Employee, bool>(FilterFunc1)">
-                <ToolBarContent>
-                    <MudText Typo="Typo.h6">Список персонала</MudText>
-                    <MudSpacer />
-                    <MudTextField @bind-Value="searchString" Placeholder="Поиск по ФИО или Спец." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"></MudTextField>
-                </ToolBarContent>
-                <HeaderContent>
-                    <MudTh>ФИО</MudTh>
-                    <MudTh>Роль</MudTh>
-                    <MudTh>Спец. / Смена</MudTh>
-                    <MudTh>Авторизация</MudTh>
-                    <MudTh Style="text-align: right;">Действия</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="ФИО">
-                        <MudText Typo="Typo.body2" Style="font-weight: 600;">@context.FullName</MudText>
-                        @if (context.Role == "Worker")
+                        @if (newEmployee.Role == "Worker")
                         {
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Brigade, @context.Grade разряд</MudText>
+                            <div class="d-flex gap-4 mb-4">
+                                <MudSelect T="string" @bind-Value="newEmployee.Brigade" Label="Бригада" Variant="Variant.Outlined">
+                                    @foreach (var brigade in brigades)
+                                    {
+                                        <MudSelectItem T="string" Value="@brigade.Name">@brigade.Name</MudSelectItem>
+                                    }
+                                </MudSelect>
+                                <MudNumericField @bind-Value="newEmployee.Grade" Label="Разряд" Variant="Variant.Outlined" Min="1" Max="6" />
+                            </div>
                         }
-                    </MudTd>
-                    <MudTd DataLabel="Роль">
-                        @if (context.Role == "Worker")
-                        {
-                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">Слесарь</MudChip>
-                        }
-                        else if (context.Role == "Master")
-                        {
 
-                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">Мастер</MudChip>
-                        }
-                        else
+                        @if (newEmployee.Role == "Admin" || newEmployee.Role == "Manager")
                         {
+                            <MudTextField @bind-Value="newEmployee.Login" Label="Логин" Variant="Variant.Outlined" Class="mb-4" />
+                            <MudTextField @bind-Value="newEmployee.PasswordHash" Label="Пароль" Variant="Variant.Outlined" Class="mb-4" InputType="InputType.Password" />
+                        }
+                    </MudCardContent>
+                    <MudCardActions Class="pa-4 pt-0">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true" OnClick="SaveEmployee" DisableElevation="true">
+                            СОЗДАТЬ УЧЕТНУЮ ЗАПИСЬ
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
 
-                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">Админ</MudChip>
-                        }
-                    </MudTd>
-                    <MudTd DataLabel="Спец. / Смена">
-                        <div>@context.Specialty</div>
-                        <div style="font-size: 0.8rem; color: gray;">@context.Shift</div>
-                    </MudTd>
-                    <MudTd DataLabel="Авторизация">
-                        @if (context.Role == "Admin")
-                        {
-                            <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Login">@context.Login</MudChip>
-                        }
-                        else
-                        {
-                            <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Dialpad">@context.PinCode</MudChip>
-                        }
-                    </MudTd>
-                    <MudTd DataLabel="Действия" Style="text-align: right;">
-                        <MudIconButton Icon="@Icons.Material.Filled.DeleteOutline" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteEmployee(context))" Title="Удалить" />
-                    </MudTd>
-                </RowTemplate>
-                <PagerContent>
-                    <MudTablePager RowsPerPageString="Строк на странице:" InfoFormat="{first_item}-{last_item} из {all_items}" />
-                </PagerContent>
-            </MudTable>
-        </MudItem>
-    </MudGrid>
-</MudContainer>
+            <MudItem xs="12" md="8">
+                <MudTable Items="@employees" Hover="true" Elevation="3" Class="rounded-lg" Filter="new Func<Employee, bool>(FilterFunc1)">
+                    <ToolBarContent>
+                        <MudText Typo="Typo.h6">Список персонала</MudText>
+                        <MudSpacer />
+                        <MudTextField @bind-Value="searchString" Placeholder="Поиск по ФИО или Спец." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"></MudTextField>
+                    </ToolBarContent>
+                    <HeaderContent>
+                        <MudTh>ФИО</MudTh>
+                        <MudTh>Роль</MudTh>
+                        <MudTh>Спец. / Смена</MudTh>
+                        <MudTh>Авторизация</MudTh>
+                        <MudTh Style="text-align: right;">Действия</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="ФИО">
+                            <MudText Typo="Typo.body2" Style="font-weight: 600;">@context.FullName</MudText>
+                            @if (context.Role == "Worker")
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Brigade, @context.Grade разряд</MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Роль">
+                            @if (context.Role == "Worker")
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">Слесарь</MudChip>
+                            }
+                            else if (context.Role == "Master")
+                            {
+
+                                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">Мастер</MudChip>
+                            }
+                            else
+                            {
+
+                                <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined">Админ</MudChip>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Спец. / Смена">
+                            <div>@context.Specialty</div>
+                            <div style="font-size: 0.8rem; color: gray;">@context.Shift</div>
+                        </MudTd>
+                        <MudTd DataLabel="Авторизация">
+                            @if (context.Role == "Admin")
+                            {
+                                <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Login">@context.Login</MudChip>
+                            }
+                            else
+                            {
+                                <MudChip T="string" Size="Size.Small" Icon="@Icons.Material.Filled.Dialpad">@context.PinCode</MudChip>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Действия" Style="text-align: right;">
+                            <MudIconButton Icon="@Icons.Material.Filled.DeleteOutline" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteEmployee(context))" Title="Удалить" />
+                        </MudTd>
+                    </RowTemplate>
+                    <PagerContent>
+                        <MudTablePager RowsPerPageString="Строк на странице:" InfoFormat="{first_item}-{last_item} из {all_items}" />
+                    </PagerContent>
+                </MudTable>
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+}
+

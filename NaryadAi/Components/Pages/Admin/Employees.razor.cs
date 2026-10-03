@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor;
 using NaryadAi.Data;
@@ -9,11 +10,16 @@ namespace NaryadAi.Components.Pages.Admin
     public partial class Employees : ComponentBase
     {
         [Inject] private AppDbContext DbContext { get; set; } = default!;
-        [Inject] private ISnackbar Snackbar { get; set; } = default!; 
+        [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+        [Inject] private ProtectedLocalStorage BrowserStorage { get; set; } = default!;
+        [Inject] private NavigationManager Navigation { get; set; } = default!;
 
         private List<Employee> employees = new();
         private Employee newEmployee = new Employee { Role = "Worker" };
         private string searchString = "";
+
+        private bool isAuthorized = false;
 
         // Списки для выпадающих меню
         private List<ReferenceItem> specialties = new();
@@ -39,6 +45,23 @@ namespace NaryadAi.Components.Pages.Admin
             employees = await DbContext.Employees.OrderByDescending(e => e.Id).ToListAsync();
         }
 
+        protected override async Task OnAfterRenderAsync(bool firstRender)
+        {
+            if (firstRender)
+            {
+                var roleResult = await BrowserStorage.GetAsync<string>("UserRole");
+
+                if (roleResult.Success && roleResult.Value == "Admin")
+                {
+                    isAuthorized = true;
+                    StateHasChanged(); 
+                }
+                else
+                {
+                    Navigation.NavigateTo("/login"); 
+                }
+            }
+        }
         private async Task SaveEmployee()
         {
             if (string.IsNullOrWhiteSpace(newEmployee.FullName))
