@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -13,15 +13,24 @@ public class AiReviewService(
     IHttpClientFactory httpClientFactory,
     IConfiguration configuration,
     AppDbContext db,
-    IWebHostEnvironment environment)
+    IWebHostEnvironment environment,
+    ILogger<AiReviewService> logger)
 {
     public async Task<AiReviewResult> ReviewAsync(WorkOrder order, CancellationToken cancellationToken = default)
     {
         var groqKey = configuration["Ai:GroqApiKey"];
         if (!string.IsNullOrWhiteSpace(groqKey))
         {
-            try { return await ReviewWithGroqVisionAsync(order, groqKey, cancellationToken); }
-            catch { /* Fallback */ }
+            try 
+            { 
+                return await ReviewWithGroqVisionAsync(order, groqKey, cancellationToken); 
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Ошибка анализа ИИ через Groq Vision для наряда #{OrderNumber}. Переход на резервные правила.", order.Number);
+                var fallback = await ReviewWithRulesAsync(order, cancellationToken);
+                return fallback with { Explanation = $"{fallback.Explanation} (ИИ-анализ временно недоступен: {ex.Message})" };
+            }
         }
 
         var endpoint = configuration["Ai:AnthropicEndpoint"];
@@ -48,32 +57,43 @@ public class AiReviewService(
             ? $"{(order.Deadline - order.StartedAt.Value).TotalMinutes:F0} минут" 
             : "неизвестно";
 
-        var systemPrompt = @"Ты — строгий AI-контролер на промышленном предприятии.
-Твоя задача — проверить закрытый наряд на выполнение и визуальное качество (по фото), затем вернуть JSON-ответ:
+        var systemPrompt = @"Ты — строгий промышленный AI-контролер комбината.
+Твоя задача — объективно оценить качество выполнения наряда на основе описания проблемы, выполненных работ, шифра неисправности, времени, списанных материалов и фотографий (до/после).
+Верни строгий JSON-ответ:
 {
   ""verdict"": ""Принято"" | ""Принято с замечаниями"" | ""Требует доработки"",
-  ""score"": <число от 0 до 100>,
-  ""explanation"": ""краткое объяснение на русском""
+  ""score"": <целое число от 0 до 100>,
+  ""explanation"": ""<краткое обоснование вердикта и качества на русском языке>""
 }
-Обязательно учитывай фотографии (до и после) если они переданы. Устранена ли проблема? Есть ли мусор? 
-Проверяй также время выполнения и соответствие материалов шифру.";
+Правила оценки:
+1. Если переданы фото ДО и ПОСЛЕ, проверь, устранена ли неисправность, нет ли строительного мусора или незакрепленных деталей.
+2. Если при внеплановом/аварийном наряде отсутствует фото ПОСЛЕ или описание работ слишком поверхностное, снижай оценку и выноси 'Требует доработки' или 'Принято с замечаниями'.
+3. Проверь логичность списанных материалов по отношению к шифру поломки.
+4. Отвечай только валидным JSON без лишнего текста.";
 
-        var textContent = $@"Проблема: {order.Description}
-Выполнено: {order.CloseWorksDone}
+        var textContent = $@"Наряд: {order.Number} (Тип: {order.Type}, Приоритет: {order.Priority})
+Оборудование: {order.Equipment?.Name ?? "Не указано"}
+Проблема при выдаче: {order.Description}
+Выполненные работы: {order.CloseWorksDone}
 Шифр поломки: {order.CloseFaultCode}
-Материалы: {string.Join("; ", order.Materials.Select(x => $"{x.Material} {x.Quantity} {x.Unit}"))}
-Время работы: {actualTimeStr} (разрешено: {allowedTimeStr})";
+Списанные материалы: {(order.Materials.Count > 0 ? string.Join("; ", order.Materials.Select(x => $"{x.Material} {x.Quantity} {x.Unit}")) : "Без списания")}
+Фактическое время: {actualTimeStr} (по нормативу: {allowedTimeStr})
+Комментарий исполнителя: {order.CloseComment ?? "отсутствует"}";
 
         var contentList = new List<object> { new { type = "text", text = textContent } };
 
-        foreach (var p in order.Photos)
+        var sortedPhotos = order.Photos.OrderBy(p => p.Type == "До" ? 0 : 1).ToList();
+        foreach (var p in sortedPhotos)
         {
             var path = Path.Combine(environment.ContentRootPath, p.FilePath);
             if (File.Exists(path))
             {
                 var bytes = await File.ReadAllBytesAsync(path, cancellationToken);
                 var base64 = Convert.ToBase64String(bytes);
-                var mime = path.EndsWith(".png") ? "image/png" : path.EndsWith(".webp") ? "image/webp" : "image/jpeg";
+                var mime = path.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? "image/png" 
+                         : path.EndsWith(".webp", StringComparison.OrdinalIgnoreCase) ? "image/webp" : "image/jpeg";
+                
+                contentList.Add(new { type = "text", text = $"Фотография [{p.Type.ToUpperInvariant()} выполнения работ]:" });
                 contentList.Add(new
                 {
                     type = "image_url",
@@ -84,8 +104,9 @@ public class AiReviewService(
 
         request.Content = new StringContent(JsonSerializer.Serialize(new
         {
-            model = "llama-3.2-11b-vision-preview",
+            model = "qwen/qwen3.8-27b",
             response_format = new { type = "json_object" },
+            max_tokens = 500,
             messages = new object[]
             {
                 new { role = "system", content = systemPrompt },

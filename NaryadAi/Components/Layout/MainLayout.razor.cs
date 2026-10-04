@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components;
 using NaryadAi.Services;
 using System.Threading.Tasks;
 using System;
@@ -16,6 +16,15 @@ namespace NaryadAi.Components.Layout
             Language.Changed += StateHasChanged;
         }
 
+        protected override async Task OnAfterRenderAsync(bool firstRender)
+        {
+            if (firstRender)
+            {
+                await Language.InitializeAsync();
+                StateHasChanged();
+            }
+        }
+
         public void Dispose()
         {
             Language.Changed -= StateHasChanged;
@@ -28,8 +37,9 @@ namespace NaryadAi.Components.Layout
 
         async Task ToggleLanguage()
         {
-            await Language.SetAsync(Language.Current == "RU" ? "KZ" : "RU");
-            Nav.NavigateTo(Nav.Uri, forceLoad: true);
+            var next = Language.Current == "RU" ? "KZ" : "RU";
+            await Language.SetAsync(next);
+            StateHasChanged();
         }
     }
 }

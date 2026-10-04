@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
@@ -28,18 +28,18 @@ namespace NaryadAi.Components.Pages.Worker
         private bool disposed;
         private List<WorkOrder> myTasks = new();
         private List<ReferenceItem> materialItems = new();
-        private List<ReferenceItem> faultCodes = new(); // РЎРїСЂР°РІРѕС‡РЅРёРє С€РёС„СЂРѕРІ
+        private List<ReferenceItem> faultCodes = new(); // Справочник шифров
 
-        // РЈРїСЂР°РІР»РµРЅРёРµ СЌРєСЂР°РЅР°РјРё: List (СЃРїРёСЃРѕРє), Reason (РѕС‚РєР°Р·/РїР°СѓР·Р°), CloseForm (РёСЃРїРѕР»РЅРµРЅРёРµ)
+        // Управление экранами: List (список), Reason (отказ/пауза), CloseForm (исполнение)
         private string currentView = "List";
 
-        // Р’СЂРµРјРµРЅРЅС‹Рµ РїРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ С„РѕСЂРј
+        // Временные переменные для форм
         private WorkOrder? selectedTask;
         private string pendingStatus = "";
         private string actionReason = "";
         private string materialName = "";
         private decimal materialQuantity = 1;
-        private string materialUnit = "С€С‚.";
+        private string materialUnit = "шт.";
         private readonly List<MaterialWriteOff> materialDraft = new();
 
         protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -55,7 +55,7 @@ namespace NaryadAi.Components.Pages.Worker
                     currentWorkerId = idResult.Value;
                     ChangeNotifier.Changed += OnWorkOrderChanged;
 
-                    // Р—Р°РіСЂСѓР¶Р°РµРј С€РёС„СЂС‹ РЅРµРёСЃРїСЂР°РІРЅРѕСЃС‚РµР№ РёР· СѓРЅРёРІРµСЂСЃР°Р»СЊРЅРѕРіРѕ СЃРїСЂР°РІРѕС‡РЅРёРєР°
+                    // Загружаем шифры неисправностей из универсального справочника
                     faultCodes = await DbContext.ReferenceItems.Where(r => r.Category == "FaultCode").ToListAsync();
 
                     await LoadMyTasks();
@@ -71,11 +71,11 @@ namespace NaryadAi.Components.Pages.Worker
         private async Task LoadMyTasks()
         {
             myTasks = await DbContext.WorkOrders.AsNoTracking()
-                .Include(w => w.Equipment) // РџРѕРґС‚СЏРіРёРІР°РµРј РЅР°Р·РІР°РЅРёРµ РѕР±РѕСЂСѓРґРѕРІР°РЅРёСЏ
+                .Include(w => w.Equipment) // Подтягиваем название оборудования
                 .Include(w => w.Photos)
                 .Include(w => w.Materials)
-                .Where(n => n.ExecutorId == currentWorkerId && n.Status != "Р—Р°РєСЂС‹С‚" && n.Status != "РСЃРїРѕР»РЅРµРЅРѕ" && n.Status != "РџСЂРѕРІРµСЂРєР° РР" && n.Status != "РћС‚РєР»РѕРЅС‘РЅ")
-                .OrderByDescending(n => n.Priority == "РђРІР°СЂРёР№РЅС‹Р№")
+                .Where(n => n.ExecutorId == currentWorkerId && n.Status != "Закрыт" && n.Status != "Исполнено" && n.Status != "Проверка ИИ" && n.Status != "Отклонён")
+                .OrderByDescending(n => n.Priority == "Аварийный")
                 .ThenBy(n => n.Deadline)
                 .ToListAsync();
         }
@@ -137,11 +137,11 @@ namespace NaryadAi.Components.Pages.Worker
             {
                 suppressNotifierRefresh = false;
             }
-            Snackbar.Add($"РЎС‚Р°С‚СѓСЃ РёР·РјРµРЅРµРЅ РЅР°: {newStatus}", Severity.Info);
+            Snackbar.Add($"Статус изменен на: {newStatus}", Severity.Info);
             await LoadMyTasks();
         }
 
-        // --- Р›РћР“РРљРђ РћРўРљРђР—Рђ Р РџР РРћРЎРўРђРќРћР’РљР ---
+        // --- ЛОГИКА ОТКАЗА И ПРИОСТАНОВКИ ---
         private void OpenReasonForm(WorkOrder task, string status)
         {
             selectedTask = task;
@@ -154,7 +154,7 @@ namespace NaryadAi.Components.Pages.Worker
         {
             if (string.IsNullOrWhiteSpace(actionReason))
             {
-                Snackbar.Add("РћР±СЏР·Р°С‚РµР»СЊРЅРѕ СѓРєР°Р¶РёС‚Рµ РїСЂРёС‡РёРЅСѓ!", Severity.Warning);
+                Snackbar.Add("Обязательно укажите причину!", Severity.Warning);
                 return;
             }
 
@@ -173,11 +173,11 @@ namespace NaryadAi.Components.Pages.Worker
                 suppressNotifierRefresh = false;
             }
 
-            Snackbar.Add($"РќР°СЂСЏРґ {pendingStatus.ToLower()}", Severity.Success);
+            Snackbar.Add($"Наряд {pendingStatus.ToLower()}", Severity.Success);
             await ExitForms();
         }
 
-        // --- Р›РћР“РРљРђ Р—РђРљР Р«РўРРЇ РќРђР РЇР”Рђ ---
+        // --- ЛОГИКА ЗАКРЫТИЯ НАРЯДА ---
         private void OpenCloseForm(WorkOrder task)
         {
             selectedTask = task;
@@ -189,8 +189,8 @@ namespace NaryadAi.Components.Pages.Worker
         {
             try
             {
-                await PhotoService.SaveAsync(selectedTask!.Id, currentWorkerId, "РџРѕСЃР»Рµ", e.File);
-                Snackbar.Add("Р¤РѕС‚Рѕ СЃРѕС…СЂР°РЅРµРЅРѕ", Severity.Success);
+                await PhotoService.SaveAsync(selectedTask!.Id, currentWorkerId, "После", e.File);
+                Snackbar.Add("Фото сохранено", Severity.Success);
             }
             catch (InvalidOperationException ex)
             {
@@ -198,7 +198,7 @@ namespace NaryadAi.Components.Pages.Worker
             }
             catch (IOException)
             {
-                Snackbar.Add("РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ С„РѕС‚Рѕ. РџСЂРѕРІРµСЂСЊС‚Рµ СЃРІРѕР±РѕРґРЅРѕРµ РјРµСЃС‚Рѕ Рё РїРѕРІС‚РѕСЂРёС‚Рµ Р·Р°РіСЂСѓР·РєСѓ.", Severity.Error);
+                Snackbar.Add("Не удалось сохранить фото. Проверьте свободное место и повторите загрузку.", Severity.Error);
             }
         }
 
@@ -207,34 +207,34 @@ namespace NaryadAi.Components.Pages.Worker
             var material = materialItems.FirstOrDefault(x => x.Name == materialName);
             if (material is null || materialQuantity <= 0)
             {
-                Snackbar.Add("Р’С‹Р±РµСЂРёС‚Рµ РјР°С‚РµСЂРёР°Р» РёР· СЃРїСЂР°РІРѕС‡РЅРёРєР° Рё СѓРєР°Р¶РёС‚Рµ РєРѕР»РёС‡РµСЃС‚РІРѕ.", Severity.Warning);
+                Snackbar.Add("Выберите материал из справочника и укажите количество.", Severity.Warning);
                 return;
             }
             materialDraft.Add(new MaterialWriteOff { Material = material.Name, Quantity = materialQuantity, Unit = material.Unit });
             materialName = "";
             materialQuantity = 1;
-            materialUnit = "РµРґ.";
+            materialUnit = "ед.";
         }
 
         private void UpdateMaterialUnit()
         {
-            materialUnit = materialItems.FirstOrDefault(x => x.Name == materialName)?.Unit ?? "РµРґ.";
+            materialUnit = materialItems.FirstOrDefault(x => x.Name == materialName)?.Unit ?? "ед.";
         }
 
         private void RemoveMaterial(MaterialWriteOff material) => materialDraft.Remove(material);
 
         private async Task ConfirmCloseTask()
         {
-            // Р’Р°Р»РёРґР°С†РёСЏ РїРѕ РўР—: С„РѕС‚Рѕ РѕР±СЏР·Р°С‚РµР»СЊРЅРѕ РґР»СЏ РІРЅРµРїР»Р°РЅРѕРІС‹С… СЂР°Р±РѕС‚
-            if (selectedTask!.Type == "Р’РЅРµРїР»Р°РЅРѕРІС‹Р№" && string.IsNullOrEmpty(selectedTask.PhotoAfterPath))
+            // Валидация по ТЗ: фото обязательно для внеплановых работ
+            if (selectedTask!.Type == "Внеплановый" && string.IsNullOrEmpty(selectedTask.PhotoAfterPath))
             {
-                Snackbar.Add("Р”Р»СЏ Р°РІР°СЂРёР№РЅРѕРіРѕ РЅР°СЂСЏРґР° РѕР±СЏР·Р°С‚РµР»СЊРЅРѕ РїСЂРёРєСЂРµРїРёС‚Рµ С„РѕС‚Рѕ!", Severity.Error);
+                Snackbar.Add("Для аварийного наряда обязательно прикрепите фото!", Severity.Error);
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(selectedTask.CloseWorksDone) || string.IsNullOrWhiteSpace(selectedTask.CloseFaultCode))
             {
-                Snackbar.Add("Р—Р°РїРѕР»РЅРёС‚Рµ РѕР±СЏР·Р°С‚РµР»СЊРЅС‹Рµ РїРѕР»СЏ (Р Р°Р±РѕС‚С‹ Рё РЁРёС„СЂ)", Severity.Warning);
+                Snackbar.Add("Заполните обязательные поля (Работы и Шифр)", Severity.Warning);
                 return;
             }
 
@@ -248,7 +248,7 @@ namespace NaryadAi.Components.Pages.Worker
             {
                 await WorkOrderService.SubmitCompletionAsync(selectedTask.Id, currentWorkerId,
                     selectedTask.CloseWorksDone!, selectedTask.CloseFaultCode!, selectedTask.CloseComment);
-                Snackbar.Add("РќР°СЂСЏРґ РѕС‚РїСЂР°РІР»РµРЅ РЅР° РїСЂРѕРІРµСЂРєСѓ РР", Severity.Success);
+                Snackbar.Add("Наряд отправлен на проверку ИИ", Severity.Success);
             }
             catch (InvalidOperationException ex)
             {

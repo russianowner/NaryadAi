@@ -364,3 +364,11 @@ FodyWeavers.xsd
 
 appsettings.*.json
 !appsettings.json
+
+# Local tooling / scratch / secrets
+mingit/
+*.zip
+/fix*.py
+/fix*.cs
+secrets.json
+.env

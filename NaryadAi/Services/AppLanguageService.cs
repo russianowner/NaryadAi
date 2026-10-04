@@ -73,10 +73,24 @@ public sealed class AppLanguageService(ProtectedLocalStorage storage, IJSRuntime
         ["История наряда"] = "Тапсырма тарихы", ["История оборудования"] = "Жабдық тарихы",
         ["Событий нет"] = "Оқиғалар жоқ", ["Фото наряда"] = "Тапсырма фотолары",
         ["Показать фото"] = "Фотоларды көрсету", ["Фото не приложены"] = "Фотосуреттер тіркелмеген",
-        ["До"] = "Дейін", ["После"] = "Кейін"
+        ["До"] = "Дейін", ["После"] = "Кейін",
+        ["ПЕРЕНАЗНАЧИТЬ"] = "ҚАЙТА ТАҒАЙЫНДАУ",
+        ["СМЕНИТЬ ПРИОРИТЕТ"] = "БАСЫМДЫҚТЫ ӨЗГЕРТУ",
+        ["Другой исполнитель"] = "Басқа орындаушы",
+        ["Включить уведомления"] = "Хабарландыруларды қосу",
+        ["Уведомления включены"] = "Хабарландырулар қосылды",
+        ["Уведомления заблокированы в браузере"] = "Хабарландырулар браузерде бұғатталған",
+        ["Дашборд ТОиР"] = "ЖҚжТ дашборды",
+        ["Все отчёты"] = "Барлық есептер",
+        ["Канбан смены"] = "Ауысым канбаны",
+        ["ИИ-Ассистент"] = "ЖИ-Көмекші",
+        ["Сканировать QR"] = "QR сканерлеу",
+        ["Голосовой ввод"] = "Дауыспен енгізу",
+        ["Все"] = "Барлығы"
     };
 
-    private LanguageState state = new("RU");
+    private static string s_currentLanguage = "RU";
+    private LanguageState state = new(s_currentLanguage);
     public LanguageState State => state;
     public string Current => state.Code;
     public bool IsKazakh => Current == "KZ";
@@ -89,8 +103,13 @@ public sealed class AppLanguageService(ProtectedLocalStorage storage, IJSRuntime
         try
         {
             var result = await storage.GetAsync<string>("AppLanguage");
-            if (result.Success && result.Value is "RU" or "KZ") state = new LanguageState(result.Value);
+            if (result.Success && result.Value is "RU" or "KZ") 
+            {
+                s_currentLanguage = result.Value;
+                state = new LanguageState(result.Value);
+            }
             await javascript.InvokeVoidAsync("naryadAi.setLanguage", Current == "KZ" ? "kk" : "ru");
+            Changed?.Invoke();
         }
         catch (InvalidOperationException) { }
         catch (JSException) { }
@@ -99,9 +118,14 @@ public sealed class AppLanguageService(ProtectedLocalStorage storage, IJSRuntime
     public async Task SetAsync(string language)
     {
         if (language is not ("RU" or "KZ") || language == Current) return;
+        s_currentLanguage = language;
         state = new LanguageState(language);
-        await storage.SetAsync("AppLanguage", language);
-        await javascript.InvokeVoidAsync("naryadAi.setLanguage", language == "KZ" ? "kk" : "ru");
+        try
+        {
+            await storage.SetAsync("AppLanguage", language);
+            await javascript.InvokeVoidAsync("naryadAi.setLanguage", language == "KZ" ? "kk" : "ru");
+        }
+        catch { }
         Changed?.Invoke();
     }
 }

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="utf-8" />
@@ -21,126 +21,93 @@
     <Routes @rendermode="InteractiveServer" />
 
     <ReconnectModal />
-    <script src="@Assets["_framework/blazor.web.js"]">        window.naryadHardware = {
-            startListening: function (dotNetReference, methodName) {
-                if (!('webkitSpeechRecognition' in window)) {
-                    alert('Ваш браузер не поддерживает голосовой ввод');
-                    return;
-                }
-                var recognition = new webkitSpeechRecognition();
-                recognition.lang = 'ru-RU';
-                recognition.interimResults = false;
-                recognition.maxAlternatives = 1;
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
 
-                recognition.onresult = function (event) {
-                    var text = event.results[0][0].transcript;
-                    dotNetReference.invokeMethodAsync(methodName, text);
-                };
-                recognition.start();
-            },
-            scanQrCode: function (dotNetReference, methodName) {
-                alert('Демо-режим: Сканируется QR-код на оборудовании...');
-                setTimeout(() => {
-                    dotNetReference.invokeMethodAsync(methodName, 1);
-                }, 1000);
-            }
-        };
-    </script>
-    <script src="_content/MudBlazor/MudBlazor.min.js">        window.naryadHardware = {
-            startListening: function (dotNetReference, methodName) {
-                if (!('webkitSpeechRecognition' in window)) {
-                    alert('Ваш браузер не поддерживает голосовой ввод');
-                    return;
-                }
-                var recognition = new webkitSpeechRecognition();
-                recognition.lang = 'ru-RU';
-                recognition.interimResults = false;
-                recognition.maxAlternatives = 1;
-
-                recognition.onresult = function (event) {
-                    var text = event.results[0][0].transcript;
-                    dotNetReference.invokeMethodAsync(methodName, text);
-                };
-                recognition.start();
-            },
-            scanQrCode: function (dotNetReference, methodName) {
-                alert('Демо-режим: Сканируется QR-код на оборудовании...');
-                setTimeout(() => {
-                    dotNetReference.invokeMethodAsync(methodName, 1);
-                }, 1000);
-            }
-        };
-    </script>
     <script>
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('./service-worker.js')
-                        .then(reg => console.log('Service Worker успешно зарегистрирован!', reg.scope))
-                        .catch(err => console.error('Ошибка регистрации Service Worker:', err));
-                });
-            }
+        // Регистрация Service Worker для PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(reg => console.log('Service Worker успешно зарегистрирован!', reg.scope))
+                    .catch(err => console.error('Ошибка регистрации Service Worker:', err));
+            });
+        }
 
-            window.naryadNotifications = {
-                requestPermission: async function() {
-                    if (!('Notification' in window)) return false;
-                    if (Notification.permission === 'granted') return true;
-                    const permission = await Notification.requestPermission();
-                    return permission === 'granted';
-                },
-                show: function(title, options) {
-                    if (!('Notification' in window) || Notification.permission !== 'granted') return;
-                    
-                    if (options && options.data === 'emergency') {
-                        try {
-                            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                            const osc = ctx.createOscillator();
-                            const gain = ctx.createGain();
-                            osc.connect(gain);
-                            gain.connect(ctx.destination);
-                            osc.type = 'square';
-                            osc.frequency.setValueAtTime(440, ctx.currentTime);
-                            osc.frequency.setValueAtTime(880, ctx.currentTime + 0.2);
-                            osc.frequency.setValueAtTime(440, ctx.currentTime + 0.4);
-                            osc.frequency.setValueAtTime(880, ctx.currentTime + 0.6);
-                            gain.gain.setValueAtTime(0.5, ctx.currentTime);
-                            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.5);
-                            osc.start();
-                            osc.stop(ctx.currentTime + 1.5);
-                        } catch (e) { console.error(e); }
-                    }
-
-                    const notif = new Notification(title, options);
-                    notif.onclick = function() {
-                        window.focus();
-                        notif.close();
-                    };
+        // Web Notification API и звуковой сигнал аварийных нарядов
+        window.naryadNotifications = {
+            requestPermission: async function() {
+                if (!('Notification' in window)) return false;
+                if (Notification.permission === 'granted') return true;
+                const permission = await Notification.requestPermission();
+                return permission === 'granted';
+            },
+            show: function(title, options) {
+                if (!('Notification' in window) || Notification.permission !== 'granted') return;
+                
+                if (options && options.data === 'emergency') {
+                    try {
+                        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(440, ctx.currentTime);
+                        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.2);
+                        osc.frequency.setValueAtTime(440, ctx.currentTime + 0.4);
+                        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.6);
+                        gain.gain.setValueAtTime(0.5, ctx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.5);
+                        osc.start();
+                        osc.stop(ctx.currentTime + 1.5);
+                    } catch (e) { console.error(e); }
                 }
-            };
-            window.naryadHardware = {
+
+                const notif = new Notification(title, options);
+                notif.onclick = function() {
+                    window.focus();
+                    notif.close();
+                };
+            }
+        };
+
+        // Поддержка оборудования (микрофон, распознавание голоса, QR-код)
+        window.naryadHardware = {
             startListening: function (dotNetReference, methodName) {
-                if (!('webkitSpeechRecognition' in window)) {
-                    alert('Ваш браузер не поддерживает голосовой ввод');
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) {
+                    alert('Ваш браузер не поддерживает голосовой ввод. Рекомендуется использовать Chrome.');
                     return;
                 }
-                var recognition = new webkitSpeechRecognition();
-                recognition.lang = 'ru-RU';
+                const recognition = new SpeechRecognition();
+                recognition.lang = document.documentElement.lang === 'kk' ? 'kk-KZ' : 'ru-RU';
                 recognition.interimResults = false;
                 recognition.maxAlternatives = 1;
 
                 recognition.onresult = function (event) {
-                    var text = event.results[0][0].transcript;
+                    const text = event.results[0][0].transcript;
                     dotNetReference.invokeMethodAsync(methodName, text);
+                };
+                recognition.onerror = function (event) {
+                    console.warn('Ошибка распознавания речи:', event.error);
                 };
                 recognition.start();
             },
             scanQrCode: function (dotNetReference, methodName) {
-                alert('Демо-режим: Сканируется QR-код на оборудовании...');
-                setTimeout(() => {
-                    dotNetReference.invokeMethodAsync(methodName, 1);
-                }, 1000);
+                // В демо-режиме имитируем сканирование технологического шильдика оборудования
+                const simulatedEquipmentId = prompt('Имитация сканирования QR-кода оборудования.\nВведите ID оборудования (например 1, 2, 3 или 4) или нажмите OK для автовыбора:', '1');
+                const id = parseInt(simulatedEquipmentId) || 1;
+                dotNetReference.invokeMethodAsync(methodName, id);
+            }
+        };
+
+        // Вспомогательный метод смены языка
+        window.naryadAi = {
+            setLanguage: function(lang) {
+                document.documentElement.lang = lang;
             }
         };
     </script>
 </body>
 </html>
-

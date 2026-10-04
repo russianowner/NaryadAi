@@ -7,6 +7,7 @@
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
     <!-- Keep generated compiler files out of source discovery when an alternate build folder is used. -->
     <DefaultItemExcludes>$(DefaultItemExcludes);$(MSBuildProjectDirectory)\obj\**</DefaultItemExcludes>
+    <UserSecretsId>2027d576-2d88-4f6c-92c1-207986d44bd4</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

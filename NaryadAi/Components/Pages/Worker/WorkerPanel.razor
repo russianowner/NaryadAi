@@ -1,7 +1,9 @@
 @page "/worker"
 @using NaryadAi.Models
+@using NaryadAi.Services
+@inject AppLanguageService Language
 
-<PageTitle>Мои наряды - НарядAI</PageTitle>
+<PageTitle>@Language.T("Мои наряды") - НарядAI</PageTitle>
 
 @if (!isAuthorized)
 {
@@ -15,15 +17,17 @@ else
         
         @if (currentView == "List")
         {
-            <MudText Typo="Typo.h5" Class="mb-4 font-weight-bold">Мои задачи</MudText>
-            <MudButton OnClick="RequestNotificationPermission" Variant="Variant.Outlined" FullWidth="true" Class="mb-4" StartIcon="@Icons.Material.Filled.Notifications">Включить уведомления</MudButton>
+            <MudText Typo="Typo.h5" Class="mb-4 font-weight-bold">@Language.T("Мои задачи")</MudText>
+            <MudButton OnClick="RequestNotificationPermission" Variant="Variant.Outlined" FullWidth="true" Class="mb-4" StartIcon="@Icons.Material.Filled.Notifications">
+                Включить уведомления
+            </MudButton>
 
             @if (!myTasks.Any())
             {
                 <div class="empty-state">
                     <MudIcon Icon="@Icons.Material.Filled.CheckCircleOutline" Size="Size.Large" Color="Color.Success" />
-                    <MudText Typo="Typo.h6" Class="mt-2">Нет активных нарядов</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">Мастер пока ничего не назначил.</MudText>
+                    <MudText Typo="Typo.h6" Class="mt-2">@Language.T("Нет активных нарядов")</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@Language.T("Мастер пока ничего не назначил.")</MudText>
                 </div>
             }
             else
@@ -39,36 +43,36 @@ else
                                 <div class="d-flex justify-space-between align-center">
                                     <MudText Typo="Typo.subtitle1" Style="font-weight: 700;">Наряд @task.Number</MudText>
                                     <MudChip T="string" Size="Size.Small" Color="@(isEmergency ? Color.Error : Color.Primary)" Variant="Variant.Filled">
-                                        @task.Status
+                                        @Language.T(task.Status)
                                     </MudChip>
                                 </div>
                                 <MudText Typo="Typo.caption" Color="@(isEmergency ? Color.Error : Color.Secondary)">
-                                    Срок до: @task.Deadline.ToString("HH:mm")
+                                    @Language.T("Срок до:"): @task.Deadline.ToLocalTime().ToString("HH:mm")
                                 </MudText>
                             </CardHeaderContent>
                         </MudCardHeader>
 
                         <MudCardContent Class="pt-0 pb-2">
-                            <div class="info-row"><MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" /> <b>Участок:</b> @task.Location</div>
-                            <div class="info-row"><MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" /> <b>Оборудование:</b> @task.Equipment?.Name</div>
+                            <div class="info-row"><MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" /> <b>@Language.T("Участок:")</b> @task.Location</div>
+                            <div class="info-row"><MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" /> <b>@Language.T("Оборудование:")</b> @task.Equipment?.Name</div>
                             <MudText Typo="Typo.body2" Class="mt-2 task-desc">@task.Description</MudText>
                         </MudCardContent>
 
                         <MudCardActions Class="d-flex flex-wrap gap-2 pa-3">
                             @if (task.Status == "Выдан")
                             {
-                                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Large" Class="flex-grow-1 action-btn" OnClick="@(() => ChangeStatus(task, "Принят в работу"))">ПРИНЯТЬ</MudButton>
-                                <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Large" Class="flex-grow-1 action-btn" OnClick="@(() => ChangeStatus(task, "В очереди"))">В ОЧЕРЕДЬ</MudButton>
-                                <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" Class="mt-2 action-btn" OnClick="@(() => OpenReasonForm(task, "Отклонён"))">Отклонить (с причиной)</MudButton>
+                                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Large" Class="flex-grow-1 action-btn" OnClick="@(() => ChangeStatus(task, "Принят в работу"))">@Language.T("ПРИНЯТЬ")</MudButton>
+                                <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Large" Class="flex-grow-1 action-btn" OnClick="@(() => ChangeStatus(task, "В очереди"))">@Language.T("В ОЧЕРЕДЬ")</MudButton>
+                                <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" Class="mt-2 action-btn" OnClick="@(() => OpenReasonForm(task, "Отклонён"))">@Language.T("Отклонить (с причиной)")</MudButton>
                             }
                             else if (task.Status == "Принят в работу" || task.Status == "В очереди" || task.Status == "Приостановлен" || task.Status == "На доработку")
                             {
-                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true" Class="action-btn" OnClick="@(() => ChangeStatus(task, "В работе"))">НАЧАТЬ ИСПОЛНЕНИЕ</MudButton>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true" Class="action-btn" OnClick="@(() => ChangeStatus(task, "В работе"))">@Language.T("НАЧАТЬ ИСПОЛНЕНИЕ")</MudButton>
                             }
                             else if (task.Status == "В работе")
                             {
-                                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Large" Class="flex-grow-1 action-btn" OnClick="@(() => OpenCloseForm(task))">ИСПОЛНЕНО</MudButton>
-                                <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Large" Class="flex-grow-1 action-btn" OnClick="@(() => OpenReasonForm(task, "Приостановлен"))">ПАУЗА</MudButton>
+                                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Large" Class="flex-grow-1 action-btn" OnClick="@(() => OpenCloseForm(task))">@Language.T("ИСПОЛНЕНО")</MudButton>
+                                <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Large" Class="flex-grow-1 action-btn" OnClick="@(() => OpenReasonForm(task, "Приостановлен"))">@Language.T("ПАУЗА")</MudButton>
                             }
                         </MudCardActions>
                     </MudCard>
@@ -78,48 +82,48 @@ else
         else if (currentView == "Reason")
         {
             <!-- ФОРМА УКАЗАНИЯ ПРИЧИНЫ (Отказ / Пауза) -->
-            <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Class="mb-4" OnClick="BackToList">Назад</MudButton>
-            <MudText Typo="Typo.h5" Class="mb-4 font-weight-bold">@(pendingStatus == "Отклонён" ? "Отказ от наряда" : "Приостановка работ")</MudText>
+            <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Class="mb-4" OnClick="BackToList">@Language.T("Назад")</MudButton>
+            <MudText Typo="Typo.h5" Class="mb-4 font-weight-bold">@(pendingStatus == "Отклонён" ? Language.T("Отказ от наряда") : Language.T("Приостановка работ"))</MudText>
             
             <MudCard Elevation="2" Class="pa-4 rounded-lg">
-                <MudText Typo="Typo.body2" Class="mb-4">Укажите причину для наряда @selectedTask?.Number. Это обязательно по регламенту.</MudText>
-                <MudTextField @bind-Value="actionReason" Label="Причина" Lines="3" Variant="Variant.Outlined" Class="mb-4" AutoFocus="true" />
+                <MudText Typo="Typo.body2" Class="mb-4">@Language.T("Укажите причину для наряда") @selectedTask?.Number. @Language.T("Это обязательно по регламенту.")</MudText>
+                <MudTextField @bind-Value="actionReason" Label="@Language.T("Причина")" Lines="3" Variant="Variant.Outlined" Class="mb-4" AutoFocus="true" />
                 
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true" Class="action-btn" OnClick="ConfirmReasonAction">
-                    ПОДТВЕРДИТЬ
+                    @Language.T("ПОДТВЕРДИТЬ")
                 </MudButton>
             </MudCard>
         }
         else if (currentView == "CloseForm")
         {
             <!-- ФОРМА ЗАКРЫТИЯ НАРЯДА (п. 5.3 ТЗ) -->
-            <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Class="mb-4" OnClick="BackToList">Назад</MudButton>
-            <MudText Typo="Typo.h5" Class="mb-4 font-weight-bold">Закрытие наряда @selectedTask?.Number</MudText>
+            <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Class="mb-4" OnClick="BackToList">@Language.T("Назад")</MudButton>
+            <MudText Typo="Typo.h5" Class="mb-4 font-weight-bold">@Language.T("Закрытие наряда") @selectedTask?.Number</MudText>
 
             <MudCard Elevation="2" Class="pa-4 rounded-lg mb-4">
-                <MudTextField @bind-Value="selectedTask!.CloseWorksDone" Label="Выполненные работы" Lines="2" Variant="Variant.Outlined" Class="mb-4" />
+                <MudTextField @bind-Value="selectedTask!.CloseWorksDone" Label="@Language.T("Выполненные работы")" Lines="2" Variant="Variant.Outlined" Class="mb-4" />
                 
-                <MudSelect T="string" @bind-Value="selectedTask.CloseFaultCode" Label="Шифр неисправности" Variant="Variant.Outlined" Class="mb-4">
+                <MudSelect T="string" @bind-Value="selectedTask.CloseFaultCode" Label="@Language.T("Шифр неисправности")" Variant="Variant.Outlined" Class="mb-4">
                     @foreach (var fault in faultCodes)
                     {
                         <MudSelectItem T="string" Value="@fault.Name">@fault.Name</MudSelectItem>
                     }
                 </MudSelect>
 
-                <MudTextField @bind-Value="selectedTask.CloseComment" Label="Комментарий к выполнению" Lines="2" Variant="Variant.Outlined" Class="mb-4" />
+                <MudTextField @bind-Value="selectedTask.CloseComment" Label="@Language.T("Комментарий к выполнению")" Lines="2" Variant="Variant.Outlined" Class="mb-4" />
 
-                <MudText Typo="Typo.subtitle1" Class="mb-2">Списание материалов</MudText>
+                <MudText Typo="Typo.subtitle1" Class="mb-2">@Language.T("Списание материалов")</MudText>
                 <div class="material-entry mb-2">
-                    <MudSelect T="string" @bind-Value="materialName" @bind-Value:after="UpdateMaterialUnit" Label="Материал" Variant="Variant.Outlined">
+                    <MudSelect T="string" @bind-Value="materialName" @bind-Value:after="UpdateMaterialUnit" Label="@Language.T("Материал")" Variant="Variant.Outlined">
                         @foreach (var material in materialItems)
                         {
                             <MudSelectItem T="string" Value="@material.Name">@material.Name (@material.Unit)</MudSelectItem>
                         }
                     </MudSelect>
-                    <MudNumericField T="decimal" @bind-Value="materialQuantity" Label="Количество" Min="0.001m" Variant="Variant.Outlined" />
-                    <MudTextField Value="@materialUnit" Label="Единица" Variant="Variant.Outlined" Disabled="true" />
+                    <MudNumericField T="decimal" @bind-Value="materialQuantity" Label="@Language.T("Количество")" Min="0.001m" Variant="Variant.Outlined" />
+                    <MudTextField Value="@materialUnit" Label="@Language.T("Единица")" Variant="Variant.Outlined" Disabled="true" />
                 </div>
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" Class="action-btn mb-2" OnClick="AddMaterial">ДОБАВИТЬ МАТЕРИАЛ</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" Class="action-btn mb-2" OnClick="AddMaterial">@Language.T("ДОБАВИТЬ МАТЕРИАЛ")</MudButton>
                 @foreach (var material in materialDraft)
                 {
                     <MudChip T="string" Class="mb-2" OnClose="@(() => RemoveMaterial(material))">@material.Material — @material.Quantity @material.Unit</MudChip>
@@ -129,17 +133,17 @@ else
                 <div class="photo-upload-zone mb-4">
                     <label class="photo-picker action-btn">
                         <MudIcon Icon="@Icons.Material.Filled.CameraAlt" />
-                        @(string.IsNullOrEmpty(selectedTask.PhotoAfterPath) ? "ВЫБРАТЬ ФОТО ПОСЛЕ" : "ФОТО СОХРАНЕНО")
+                        @(string.IsNullOrEmpty(selectedTask.PhotoAfterPath) ? Language.T("ВЫБРАТЬ ФОТО ПОСЛЕ") : Language.T("ФОТО СОХРАНЕНО"))
                         <InputFile OnChange="UploadPhoto" accept="image/png,image/jpeg,image/webp" />
                     </label>
                     @if (selectedTask.Type == "Внеплановый")
                     {
-                        <MudText Typo="Typo.caption" Color="Color.Error">Фото обязательно для аварийных работ</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Error">@Language.T("Фото обязательно для аварийных работ")</MudText>
                     }
                 </div>
 
                 <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Large" FullWidth="true" Class="action-btn" OnClick="ConfirmCloseTask">
-                    ОТПРАВИТЬ НА ПРОВЕРКУ
+                    @Language.T("ОТПРАВИТЬ НА ПРОВЕРКУ")
                 </MudButton>
             </MudCard>
         }

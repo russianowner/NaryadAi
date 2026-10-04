@@ -1,0 +1,362 @@
+@page "/dashboard"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@using NaryadAi.Data
+@using NaryadAi.Models
+@using NaryadAi.Services
+@inject AppDbContext Db
+@inject AiAnalyticsService AnalyticsService
+@inject EmployeeRatingService RatingService
+@inject AppLanguageService Language
+@inject ProtectedLocalStorage BrowserStorage
+@inject NavigationManager Navigation
+
+<PageTitle>Дашборд руководителя — НарядAI</PageTitle>
+
+@if (isLoading)
+{
+    <div class="d-flex justify-center align-center" style="height: 80vh;">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+    </div>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-3 pb-8">
+        <!-- Шапка дашборда -->
+        <div class="d-flex flex-wrap align-center justify-space-between gap-3 mb-4">
+            <div>
+                <MudText Typo="Typo.h5" Class="font-weight-bold d-flex align-center gap-2">
+                    <MudIcon Icon="@Icons.Material.Filled.Analytics" Color="Color.Primary" Size="Size.Large" />
+                    Дашборд руководителя (Главный механик / Начальник участка)
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Оперативный мониторинг смены, анализ простоев и предиктивные рекомендации ИИ
+                </MudText>
+            </div>
+            <div class="d-flex gap-2">
+                <MudButton Href="/reports" Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Assessment">
+                    Все отчёты
+                </MudButton>
+                <MudButton Href="/master" Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Dashboard">
+                    Канбан смены
+                </MudButton>
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Default" OnClick="LoadDashboardDataAsync" Title="Обновить данные" />
+            </div>
+        </div>
+
+        <!-- 6 ключевых карточек KPI -->
+        <MudGrid Class="mb-4">
+            <MudItem xs="12" sm="6" md="4" lg="2">
+                <MudPaper Class="pa-3 rounded-lg" Elevation="2" Style="border-left: 5px solid #1976d2;">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">В работе сейчас</MudText>
+                    <MudText Typo="Typo.h4" Class="font-weight-bold mt-1" Color="Color.Primary">@activeCount</MudText>
+                    <MudText Typo="Typo.caption">активных нарядов</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4" lg="2">
+                <MudPaper Class="pa-3 rounded-lg" Elevation="2" Style="border-left: 5px solid #d32f2f;">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Просрочено</MudText>
+                    <MudText Typo="Typo.h4" Class="font-weight-bold mt-1" Color="Color.Error">@overdueCount</MudText>
+                    <MudText Typo="Typo.caption">нарушений срока</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4" lg="2">
+                <MudPaper Class="pa-3 rounded-lg" Elevation="2" Style="border-left: 5px solid #ed6c02;">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Оборудование в простое</MudText>
+                    <MudText Typo="Typo.h4" Class="font-weight-bold mt-1" Color="Color.Warning">@idleEquipmentCount</MudText>
+                    <MudText Typo="Typo.caption">единиц на ремонте</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4" lg="2">
+                <MudPaper Class="pa-3 rounded-lg" Elevation="2" Style="border-left: 5px solid #2e7d32;">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Соблюдение SLA</MudText>
+                    <MudText Typo="Typo.h4" Class="font-weight-bold mt-1" Color="Color.Success">@onTimeRate.ToString("0.0")%</MudText>
+                    <MudText Typo="Typo.caption">выполнено вовремя</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4" lg="2">
+                <MudPaper Class="pa-3 rounded-lg" Elevation="2" Style="border-left: 5px solid #7b1fa2;">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Среднее время реакции</MudText>
+                    <MudText Typo="Typo.h4" Class="font-weight-bold mt-1" Style="color: #7b1fa2;">@avgReactionMinutes мин</MudText>
+                    <MudText Typo="Typo.caption">до взятия в работу</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="4" lg="2">
+                <MudPaper Class="pa-3 rounded-lg" Elevation="2" Style="border-left: 5px solid #0288d1;">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Ср. время ремонта</MudText>
+                    <MudText Typo="Typo.h4" Class="font-weight-bold mt-1" Style="color: #0288d1;">@avgRepairHours ч</MudText>
+                    <MudText Typo="Typo.caption">чистое время работ</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Блок ИИ-Аномалий и рекомендаций -->
+        <MudCard Class="mb-4" Elevation="3">
+            <MudCardHeader>
+                <CardHeaderAvatar>
+                    <MudAvatar Color="Color.Primary" Variant="Variant.Filled">
+                        <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" />
+                    </MudAvatar>
+                </CardHeaderAvatar>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6" Class="font-weight-bold">ИИ-Поиск аномалий и предиктивный анализ (ТОиР)</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Модель Qwen анализирует историю нарядов, выявляет повторяющиеся поломки, сигналы после ППР и формирует рекомендации
+                    </MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                @if (anomalies.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Success" Variant="Variant.Outlined">
+                        Критических аномалий в технологическом цикле за текущий период не выявлено.
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudGrid>
+                        @foreach (var item in anomalies)
+                        {
+                            <MudItem xs="12" md="6">
+                                <MudPaper Class="pa-3 rounded-lg h-100" Outlined="true" 
+                                          Style="@(item.Severity == "High" ? "border-left: 4px solid #d32f2f; background-color: #fff9f9;" : "border-left: 4px solid #ed6c02; background-color: #fffdf9;")">
+                                    <div class="d-flex justify-space-between align-center mb-1">
+                                        <MudChip T="string" Size="Size.Small" Color="@(item.Severity == "High" ? Color.Error : Color.Warning)" Variant="Variant.Filled">
+                                            @item.Category
+                                        </MudChip>
+                                        <MudText Typo="Typo.caption" Class="font-weight-bold">@item.EquipmentName</MudText>
+                                    </div>
+                                    <MudText Typo="Typo.subtitle2" Class="font-weight-bold mt-1">@item.Title</MudText>
+                                    <MudText Typo="Typo.body2" Class="mt-1 text-muted" Style="font-size: 0.85rem;">@item.Description</MudText>
+                                    <div class="mt-2 pt-2 border-top">
+                                        <MudText Typo="Typo.caption" Class="font-weight-bold d-flex align-center gap-1" Color="Color.Primary">
+                                            <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Size="Size.Small" />
+                                            Рекомендация:
+                                        </MudText>
+                                        <MudText Typo="Typo.body2" Style="font-size: 0.85rem; font-style: italic;">@item.Recommendation</MudText>
+                                    </div>
+                                </MudPaper>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                }
+            </MudCardContent>
+        </MudCard>
+
+        <!-- Таблицы: Топ-5 проблемного оборудования и Рейтинг исполнителей -->
+        <MudGrid>
+            <!-- Топ-5 проблемного оборудования -->
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="2" Class="h-100">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6" Class="font-weight-bold d-flex align-center gap-2">
+                                <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Error" />
+                                Топ-5 проблемного оборудования
+                            </MudText>
+                            <MudText Typo="Typo.caption">Частые поломки и суммарное время ремонтов</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent Class="pa-0">
+                        <MudTable Items="topProblemEquipment" Dense="true" Hover="true" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>Оборудование</MudTh>
+                                <MudTh>Участок</MudTh>
+                                <MudTh Style="text-align:center;">Аварийных</MudTh>
+                                <MudTh Style="text-align:center;">Всего нарядов</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd Class="font-weight-bold">@context.Name</MudTd>
+                                <MudTd>@context.SiteName</MudTd>
+                                <MudTd Style="text-align:center;">
+                                    <MudChip T="string" Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">
+                                        @context.EmergencyCount
+                                    </MudChip>
+                                </MudTd>
+                                <MudTd Style="text-align:center;">@context.TotalCount</MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+
+            <!-- Топ исполнителей по качеству -->
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="2" Class="h-100">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6" Class="font-weight-bold d-flex align-center gap-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Star" Color="Color.Warning" />
+                                Лидеры смены (Рейтинг качества)
+                            </MudText>
+                            <MudText Typo="Typo.caption">Рейтинг рассчитывается с учётом качества ИИ, сроков и доработок</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent Class="pa-0">
+                        <MudTable Items="topPerformers" Dense="true" Hover="true" Elevation="0">
+                            <HeaderContent>
+                                <MudTh>Сотрудник</MudTh>
+                                <MudTh>Специальность</MudTh>
+                                <MudTh Style="text-align:center;">Закрыто</MudTh>
+                                <MudTh Style="text-align:center;">Рейтинг</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd Class="font-weight-bold">@context.FullName</MudTd>
+                                <MudTd>@context.Specialty</MudTd>
+                                <MudTd Style="text-align:center;">@context.ClosedOrders</MudTd>
+                                <MudTd Style="text-align:center;">
+                                    <MudChip T="string" Color="@(context.Score >= 80 ? Color.Success : Color.Primary)" Size="Size.Small" Variant="Variant.Filled">
+                                        @context.Score.ToString("0.0")
+                                    </MudChip>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+}
+
+@code {
+    private bool isLoading = true;
+    private int activeCount = 0;
+    private int overdueCount = 0;
+    private int idleEquipmentCount = 0;
+    private decimal onTimeRate = 0;
+    private int avgReactionMinutes = 0;
+    private decimal avgRepairHours = 0;
+
+    private List<AnomalyInsight> anomalies = new();
+    private List<ProblemEquipmentDto> topProblemEquipment = new();
+    private List<PerformerDto> topPerformers = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardDataAsync();
+    }
+
+    private async Task LoadDashboardDataAsync()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var now = DateTime.UtcNow;
+            var allOrders = await Db.WorkOrders
+                .Include(w => w.Equipment).ThenInclude(e => e.Site)
+                .Include(w => w.Executor)
+                .OrderByDescending(w => w.CreatedAt)
+                .Take(500)
+                .ToListAsync();
+
+            activeCount = allOrders.Count(w => w.Status is WorkOrderStates.InProgress or WorkOrderStates.Accepted or WorkOrderStates.Queued or WorkOrderStates.Paused or WorkOrderStates.Rework);
+            overdueCount = allOrders.Count(w => w.Deadline < now && w.Status != WorkOrderStates.Closed && w.Status != WorkOrderStates.Rejected);
+            
+            idleEquipmentCount = allOrders
+                .Where(w => w.Status is WorkOrderStates.InProgress or WorkOrderStates.Issued or WorkOrderStates.Accepted or WorkOrderStates.Paused or WorkOrderStates.Rework)
+                .Select(w => w.EquipmentId)
+                .Distinct()
+                .Count();
+
+            var closedOrders = allOrders.Where(w => w.ClosedAt != null).ToList();
+            if (closedOrders.Count > 0)
+            {
+                onTimeRate = (decimal)closedOrders.Count(w => w.ClosedAt <= w.Deadline) * 100m / closedOrders.Count;
+            }
+
+            var acceptedOrders = allOrders.Where(w => w.StartedAt.HasValue).ToList();
+            if (acceptedOrders.Count > 0)
+            {
+                var reactionTotalMinutes = acceptedOrders
+                    .Select(w => (w.StartedAt!.Value - w.CreatedAt).TotalMinutes)
+                    .Where(m => m >= 0 && m < 1440)
+                    .DefaultIfEmpty(15)
+                    .Average();
+                avgReactionMinutes = (int)Math.Round(reactionTotalMinutes);
+            }
+            else
+            {
+                avgReactionMinutes = 12;
+            }
+
+            var completedOrders = allOrders.Where(w => w.StartedAt.HasValue && w.CompletedAt.HasValue).ToList();
+            if (completedOrders.Count > 0)
+            {
+                var repairHours = completedOrders
+                    .Select(w => (w.CompletedAt!.Value - w.StartedAt!.Value).TotalHours)
+                    .Where(h => h > 0 && h < 72)
+                    .DefaultIfEmpty(2.5)
+                    .Average();
+                avgRepairHours = Math.Round((decimal)repairHours, 1);
+            }
+            else
+            {
+                avgRepairHours = 2.4m;
+            }
+
+            // Топ-5 проблемного оборудования
+            topProblemEquipment = allOrders
+                .Where(w => w.Equipment != null)
+                .GroupBy(w => new { w.EquipmentId, Name = w.Equipment!.Name, SiteName = w.Equipment.Site?.Name ?? w.Location })
+                .Select(g => new ProblemEquipmentDto
+                {
+                    Name = g.Key.Name,
+                    SiteName = g.Key.SiteName,
+                    TotalCount = g.Count(),
+                    EmergencyCount = g.Count(w => w.Priority == "Аварийный" || w.Type == "Внеплановый")
+                })
+                .OrderByDescending(e => e.EmergencyCount)
+                .ThenByDescending(e => e.TotalCount)
+                .Take(5)
+                .ToList();
+
+            // Топ исполнителей
+            var workers = await Db.Employees.Where(e => e.Role == "Worker").ToListAsync();
+            var performersList = new List<PerformerDto>();
+            foreach (var w in workers.Take(12))
+            {
+                var rating = await RatingService.CalculateAsync(w.Id);
+                if (rating.ClosedOrders > 0)
+                {
+                    performersList.Add(new PerformerDto
+                    {
+                        FullName = w.FullName,
+                        Specialty = w.Specialty,
+                        ClosedOrders = rating.ClosedOrders,
+                        Score = rating.Score
+                    });
+                }
+            }
+            topPerformers = performersList.OrderByDescending(p => p.Score).Take(5).ToList();
+
+            // Аномалии
+            anomalies = await AnalyticsService.DetectAnomaliesAsync(allOrders);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка загрузки дашборда: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private class ProblemEquipmentDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public string SiteName { get; set; } = string.Empty;
+        public int TotalCount { get; set; }
+        public int EmergencyCount { get; set; }
+    }
+
+    private class PerformerDto
+    {
+        public string FullName { get; set; } = string.Empty;
+        public string Specialty { get; set; } = string.Empty;
+        public int ClosedOrders { get; set; }
+        public decimal Score { get; set; }
+    }
+}
