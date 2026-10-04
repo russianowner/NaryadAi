@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor;
@@ -8,12 +8,13 @@ using NaryadAi.Services;
 
 namespace NaryadAi.Components.Pages.Profile;
 
-public partial class Profile : ComponentBase
+public partial class Profile : ComponentBase, IDisposable
 {
     [Inject] private AppDbContext DbContext { get; set; } = default!;
     [Inject] private ProtectedLocalStorage BrowserStorage { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private EmployeeRatingService RatingService { get; set; } = default!;
+    [Inject] private AppLanguageService Language { get; set; } = default!;
 
     private Employee? employee;
     private List<WorkOrder> recentOrders = new();
@@ -132,4 +133,16 @@ public partial class Profile : ComponentBase
         "В очереди" or "Приостановлен" => Color.Info,
         _ => Color.Default
     };
+
+    protected override void OnInitialized()
+    {
+        Language.Changed += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Language.Changed -= OnLanguageChanged;
+    }
 }

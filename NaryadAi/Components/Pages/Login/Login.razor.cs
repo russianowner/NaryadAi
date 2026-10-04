@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using NaryadAi.Data;
+using NaryadAi.Services;
 
 namespace NaryadAi.Components.Pages.Login
 {
@@ -16,13 +17,30 @@ namespace NaryadAi.Components.Pages.Login
         [Inject]
         private ProtectedLocalStorage BrowserStorage { get; set; } = default!;
 
-        private string CurrentLang { get; set; } = "RU";
+        [Inject]
+        private AppLanguageService Language { get; set; } = default!;
+
         private string enteredPin = "";
         private bool showError = false;
 
         private string username = "";
         private string password = "";
         private bool showLoginError = false;
+
+        protected override async Task OnAfterRenderAsync(bool firstRender)
+        {
+            if (firstRender)
+            {
+                await Language.InitializeAsync();
+                StateHasChanged();
+            }
+        }
+
+        private async Task OnLanguageChanged(string newLang)
+        {
+            await Language.SetAsync(newLang);
+            StateHasChanged();
+        }
 
         private Dictionary<string, string> ruTexts = new()
         {
@@ -42,7 +60,7 @@ namespace NaryadAi.Components.Pages.Login
             { "LoginButton", "КІРУ" }, { "ErrorLogin", "Логин немесе құпия сөз қате" }
         };
 
-        private string GetText(string key) => CurrentLang == "RU" ? ruTexts[key] : kzTexts[key];
+        private string GetText(string key) => Language.IsKazakh ? kzTexts[key] : ruTexts[key];
 
         private async Task AddDigit(string digit)
         {

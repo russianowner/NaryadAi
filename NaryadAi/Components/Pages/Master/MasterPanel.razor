@@ -1,7 +1,7 @@
-﻿@page "/master"
+@page "/master"
 @using NaryadAi.Models
 
-<PageTitle>Панель мастера - НарядAI</PageTitle>
+<PageTitle>@Language.T("Панель мастера") - НарядAI</PageTitle>
 
 @if (!isAuthorized)
 {
@@ -12,68 +12,68 @@
 else
 {
     <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4 pb-8">
-        <MudText Typo="Typo.h5" Class="mb-6 font-weight-bold" Color="Color.Primary">Выдача нового наряда</MudText>
+        <MudText Typo="Typo.h5" Class="mb-6 font-weight-bold" Color="Color.Primary">@Language.T("Выдача нового наряда")</MudText>
 
         <MudCard Elevation="3" Class="rounded-lg pa-4">
             <div class="d-flex gap-4 mb-4">
-                <MudSelect T="string" @bind-Value="newOrder.Type" Label="Тип работ" Variant="Variant.Outlined">
-                    <MudSelectItem Value="@("Плановый")">Плановый</MudSelectItem>
-                    <MudSelectItem Value="@("Внеплановый")">Внеплановый</MudSelectItem>
+                <MudSelect T="string" @bind-Value="newOrder.Type" Label="@Language.T("Тип работ")" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("Плановый")">@Language.T("Плановый")</MudSelectItem>
+                    <MudSelectItem Value="@("Внеплановый")">@Language.T("Внеплановый")</MudSelectItem>
                 </MudSelect>
 
-                <MudSelect T="string" @bind-Value="newOrder.Priority" Label="Приоритет" Variant="Variant.Outlined">
-                    <MudSelectItem Value="@("Обычный")">Обычный</MudSelectItem>
-                    <MudSelectItem Value="@("Высокий")">Высокий</MudSelectItem>
-                    <MudSelectItem Value="@("Аварийный")">Аварийный</MudSelectItem>
-                    <MudSelectItem Value="@("Плановый")">Плановый</MudSelectItem>
+                <MudSelect T="string" @bind-Value="newOrder.Priority" Label="@Language.T("Приоритет")" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("Обычный")">@Language.T("Обычный")</MudSelectItem>
+                    <MudSelectItem Value="@("Высокий")">@Language.T("Высокий")</MudSelectItem>
+                    <MudSelectItem Value="@("Аварийный")">@Language.T("Аварийный")</MudSelectItem>
+                    <MudSelectItem Value="@("Плановый")">@Language.T("Плановый")</MudSelectItem>
                 </MudSelect>
             </div>
 
             <div class="d-flex align-start gap-2 mb-4">
-                <MudTextField @bind-Value="newOrder.Description" Label="Описание проблемы" Lines="3" Variant="Variant.Outlined" Class="flex-grow-1" />
-                <MudIconButton Icon="@Icons.Material.Filled.Mic" Color="Color.Primary" Variant="Variant.Filled" OnClick="StartVoiceInput" title="Голосовой ввод" Class="mt-2" />
+                <MudTextField @bind-Value="newOrder.Description" Label="@Language.T("Описание проблемы")" Lines="3" Variant="Variant.Outlined" Class="flex-grow-1" />
+                <MudIconButton Icon="@Icons.Material.Filled.Mic" Color="Color.Primary" Variant="Variant.Filled" OnClick="StartVoiceInput" title="@Language.T("Голосовой ввод")" Class="mt-2" />
             </div>
 
             <!-- Выбор оборудования тянется из базы -->
             <div class="d-flex align-start gap-2 mb-4">
-                <MudSelect T="int" @bind-Value="newOrder.EquipmentId" Label="Оборудование" Variant="Variant.Outlined" Class="flex-grow-1" AnchorOrigin="Origin.BottomCenter">
+                <MudSelect T="int" @bind-Value="newOrder.EquipmentId" Label="@Language.T("Оборудование")" Variant="Variant.Outlined" Class="flex-grow-1" AnchorOrigin="Origin.BottomCenter">
                     @foreach (var eq in equipmentList)
                     {
                         <MudSelectItem Value="@eq.Id">@eq.Name (@eq.Location)</MudSelectItem>
                     }
                 </MudSelect>
-                <MudIconButton Icon="@Icons.Material.Filled.QrCodeScanner" Color="Color.Secondary" Variant="Variant.Filled" OnClick="ScanQrCode" title="Сканировать QR" Class="mt-2" />
+                <MudIconButton Icon="@Icons.Material.Filled.QrCodeScanner" Color="Color.Secondary" Variant="Variant.Filled" OnClick="ScanQrCode" title="@Language.T("Сканировать QR")" Class="mt-2" />
             </div>
 
             <!-- Выбор только Слесарей из базы -->
-            <MudSelect T="int?" @bind-Value="newOrder.ExecutorId" Label="Назначить исполнителя" Variant="Variant.Outlined" Class="mb-4" AnchorOrigin="Origin.BottomCenter">
+            <MudSelect T="int?" @bind-Value="newOrder.ExecutorId" Label="@Language.T("Назначить исполнителя")" Variant="Variant.Outlined" Class="mb-4" AnchorOrigin="Origin.BottomCenter">
                 @foreach (var w in workers)
                 {
                     <MudSelectItem T="int?" Value="@w.Id">
-                        <span class="worker-option"><span class="worker-status-dot @WorkerStatusClass(w.Status)"></span>@w.FullName (@w.Specialty) — @w.Status</span>
+                        <span class="worker-option"><span class="worker-status-dot @WorkerStatusClass(w.Status)"></span>@w.FullName (@Language.T(w.Specialty)) — @Language.T(w.Status)</span>
                     </MudSelectItem>
                 }
             </MudSelect>
 
-            <label class="deadline-label" for="deadline">Срок выполнения</label>
+            <label class="deadline-label" for="deadline">@Language.T("Срок выполнения")</label>
             <input id="deadline" class="deadline-input mb-4" type="datetime-local" @bind="deadlineLocal" />
 
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" FullWidth="true" OnClick="CreateOrder" Class="master-action-btn">
-                ВЫДАТЬ НАРЯД
+                @Language.T("ВЫДАТЬ НАРЯД")
             </MudButton>
         </MudCard>
 
         <section class="orders-board mt-6">
             <div class="board-heading">
                 <div>
-                    <MudText Typo="Typo.h5" Class="font-weight-bold">Наряды</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">Обновите список кнопкой фильтра или перезагрузкой страницы</MudText>
+                    <MudText Typo="Typo.h5" Class="font-weight-bold">@Language.T("Наряды")</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@Language.T("Обновите список кнопкой фильтра или перезагрузкой страницы")</MudText>
                 </div>
-                <MudSelect T="string" @bind-Value="selectedStatus" Label="Фильтр по статусу" Variant="Variant.Outlined" Class="board-filter">
-                    <MudSelectItem Value="@("Все")">Все статусы</MudSelectItem>
+                <MudSelect T="string" @bind-Value="selectedStatus" Label="@Language.T("Фильтр по статусу")" Variant="Variant.Outlined" Class="board-filter">
+                    <MudSelectItem Value="@("Все")">@Language.T("Все статусы")</MudSelectItem>
                     @foreach (var status in boardStatuses)
                     {
-                        <MudSelectItem Value="@status">@status</MudSelectItem>
+                        <MudSelectItem Value="@status">@Language.T(status)</MudSelectItem>
                     }
                 </MudSelect>
             </div>
@@ -83,30 +83,30 @@ else
                 {
                     var laneOrders = FilteredOrders.Where(x => lane.Statuses.Contains(x.Status)).ToList();
                     <section class="board-lane">
-                        <header><strong>@lane.Title</strong><span>@laneOrders.Count</span></header>
+                        <header><strong>@Language.T(lane.Title)</strong><span>@laneOrders.Count</span></header>
                         @foreach (var order in laneOrders)
                         {
                             <article class="board-order">
                                 <div class="board-order-top">
                                     <strong>@order.Number</strong>
-                                    <span class="board-status" style="--status-color:@StatusColor(order.Status)">@order.Status</span>
+                                    <span class="board-status" style="--status-color:@StatusColor(order.Status)">@Language.T(order.Status)</span>
                                 </div>
-                                <div class="board-order-equipment">@(order.Equipment?.Name ?? "Оборудование") · @order.Location</div>
+                                <div class="board-order-equipment">@(order.Equipment?.Name ?? Language.T("Оборудование")) · @order.Location</div>
                                 <div class="board-order-description">@order.Description</div>
-                                <div class="board-order-meta">Исполнитель: @(order.Executor?.FullName ?? "не назначен")</div>
-                                <div class="board-order-meta">Срок: @order.Deadline.ToLocalTime().ToString("dd.MM HH:mm")</div>
+                                <div class="board-order-meta">@Language.T("Исполнитель:"): @(order.Executor?.FullName ?? Language.T("не назначен"))</div>
+                                <div class="board-order-meta">@Language.T("Срок:"): @order.Deadline.ToLocalTime().ToString("dd.MM HH:mm")</div>
                                 @if (order.Status is "Выдан" or "Принят в работу" or "В очереди" or "Приостановлен" or "На доработку" or "Отклонён")
                                 {
                                     <div class="order-manage-box">
                                         <MudSelect T="int?" Value="@GetReassignTarget(order.Id)" ValueChanged="@(v => reassignTargets[order.Id] = v)"
-                                                   Label="Другой исполнитель" Variant="Variant.Outlined" Dense="false" Class="mt-2">
+                                                   Label="@Language.T("Другой исполнитель")" Variant="Variant.Outlined" Dense="false" Class="mt-2">
                                             @foreach (var w in workers.Where(w => w.Id != order.ExecutorId))
                                             {
-                                                <MudSelectItem T="int?" Value="@w.Id">@w.FullName — @w.Status</MudSelectItem>
+                                                <MudSelectItem T="int?" Value="@w.Id">@w.FullName — @Language.T(w.Status)</MudSelectItem>
                                             }
                                         </MudSelect>
                                         <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="master-action-btn mt-2"
-                                                   OnClick="@(() => ReassignOrder(order))">ПЕРЕНАЗНАЧИТЬ</MudButton>
+                                                   OnClick="@(() => ReassignOrder(order))">@Language.T("ПЕРЕНАЗНАЧИТЬ")</MudButton>
                                     </div>
                                 }
                                 @if (order.Status is not ("Закрыт" or "Проверка ИИ" or "Отклонён"))
@@ -114,26 +114,26 @@ else
                                     <div class="order-manage-box">
                                         <MudSelect T="string" Value="@(priorityTargets.GetValueOrDefault(order.Id) ?? order.Priority)"
                                                    ValueChanged="@(v => priorityTargets[order.Id] = v)"
-                                                   Label="Приоритет" Variant="Variant.Outlined" Class="mt-2">
+                                                   Label="@Language.T("Приоритет")" Variant="Variant.Outlined" Class="mt-2">
                                             @foreach (var p in priorities)
                                             {
-                                                <MudSelectItem Value="@p">@p</MudSelectItem>
+                                                <MudSelectItem Value="@p">@Language.T(p)</MudSelectItem>
                                             }
                                         </MudSelect>
                                         <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" Class="master-action-btn mt-2"
-                                                   OnClick="@(() => ChangePriority(order))">СМЕНИТЬ ПРИОРИТЕТ</MudButton>
+                                                   OnClick="@(() => ChangePriority(order))">@Language.T("СМЕНИТЬ ПРИОРИТЕТ")</MudButton>
                                     </div>
                                 }
                                 @if (order.Status is "Проверка ИИ" or "На доработку")
                                 {
                                     var evaluation = order.AiEvaluations.OrderByDescending(x => x.EvaluatedAt).FirstOrDefault();
                                     <div class="ai-review-box">
-                                        <strong>ИИ: @(evaluation?.Verdict ?? "проверка") · @(evaluation?.Score.ToString("0") ?? "—")/100</strong>
-                                        <span>@(evaluation?.Explanation ?? "Оценка готовится")</span>
-                                        <MudButton Variant="Variant.Filled" Color="Color.Success" FullWidth="true" Class="master-action-btn mt-2" OnClick="@(() => ApproveOrder(order))">ПРИНЯТЬ И ЗАКРЫТЬ</MudButton>
+                                        <strong>@Language.T("ИИ:"): @(Language.T(evaluation?.Verdict ?? "проверка")) · @(evaluation?.Score.ToString("0") ?? "—")/100</strong>
+                                        <span>@(evaluation?.Explanation ?? Language.T("Оценка готовится"))</span>
+                                        <MudButton Variant="Variant.Filled" Color="Color.Success" FullWidth="true" Class="master-action-btn mt-2" OnClick="@(() => ApproveOrder(order))">@Language.T("ПРИНЯТЬ И ЗАКРЫТЬ")</MudButton>
                                         @if (order.Status == "Проверка ИИ")
                                         {
-                                            <MudButton Variant="Variant.Outlined" Color="Color.Warning" FullWidth="true" Class="master-action-btn mt-2" OnClick="@(() => ReturnForRework(order))">ВЕРНУТЬ НА ДОРАБОТКУ</MudButton>
+                                            <MudButton Variant="Variant.Outlined" Color="Color.Warning" FullWidth="true" Class="master-action-btn mt-2" OnClick="@(() => ReturnForRework(order))">@Language.T("ВЕРНУТЬ НА ДОРАБОТКУ")</MudButton>
                                         }
                                     </div>
                                 }
@@ -141,7 +141,7 @@ else
                         }
                         @if (laneOrders.Count == 0)
                         {
-                            <div class="board-empty">Нарядов нет</div>
+                            <div class="board-empty">@Language.T("Нарядов нет")</div>
                         }
                     </section>
                 }

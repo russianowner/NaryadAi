@@ -1,4 +1,4 @@
-﻿@page "/login"
+@page "/login"
 @rendermode InteractiveServer
 @layout NaryadAi.Components.Layout.EmptyLayout
 
@@ -6,7 +6,7 @@
 
 <div class="auth-wrapper">
     <div class="lang-switcher">
-        <MudToggleGroup T="string" @bind-Value="CurrentLang" Color="Color.Primary" SelectionMode="SelectionMode.SingleSelection">
+        <MudToggleGroup T="string" Value="@Language.Current" ValueChanged="OnLanguageChanged" Color="Color.Primary" SelectionMode="SelectionMode.SingleSelection">
             <MudToggleItem Value="@("RU")" Text="RU" />
             <MudToggleItem Value="@("KZ")" Text="KZ" />
         </MudToggleGroup>

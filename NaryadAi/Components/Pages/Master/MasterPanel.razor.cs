@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.JSInterop;
@@ -15,9 +15,10 @@ namespace NaryadAi.Components.Pages.Master
         [Inject] private ProtectedLocalStorage BrowserStorage { get; set; } = default!;
         [Inject] private NavigationManager Navigation { get; set; } = default!;
         [Inject] private ISnackbar Snackbar { get; set; } = default!;
-    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+        [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
         [Inject] private WorkOrderService WorkOrderService { get; set; } = default!;
         [Inject] private WorkOrderChangeNotifier ChangeNotifier { get; set; } = default!;
+        [Inject] private AppLanguageService Language { get; set; } = default!;
 
         private bool isAuthorized = false;
         private int currentMasterId = 0;
@@ -107,7 +108,10 @@ namespace NaryadAi.Components.Pages.Master
     protected override void OnInitialized()
     {
         dotNetRef = DotNetObjectReference.Create(this);
+        Language.Changed += OnLanguageChanged;
     }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
 
     private async Task StartVoiceInput()
     {
@@ -133,22 +137,23 @@ namespace NaryadAi.Components.Pages.Master
         {
             newOrder.EquipmentId = equipmentId;
             StateHasChanged();
-            Snackbar.Add("Оборудование распознано по QR!", Severity.Success);
+            Snackbar.Add(Language.T("Оборудование распознано по QR!"), Severity.Success);
         }
     }
 
     public void Dispose()
-        {
-            disposed = true;
-            ChangeNotifier.Changed -= OnWorkOrderChanged;
-        }
+    {
+        disposed = true;
+        Language.Changed -= OnLanguageChanged;
+        ChangeNotifier.Changed -= OnWorkOrderChanged;
+    }
 
         private async Task CreateOrder()
         {
             // Базовая проверка
             if (string.IsNullOrWhiteSpace(newOrder.Description) || newOrder.EquipmentId == 0 || newOrder.ExecutorId == null)
             {
-                Snackbar.Add("Заполните описание, выберите оборудование и исполнителя", Severity.Warning);
+                Snackbar.Add(Language.T("Заполните описание, выберите оборудование и исполнителя"), Severity.Warning);
                 return;
             }
 
@@ -172,7 +177,7 @@ namespace NaryadAi.Components.Pages.Master
                 suppressNotifierRefresh = false;
             }
 
-            Snackbar.Add($"Наряд {newOrder.Number} успешно выдан!", Severity.Success);
+            Snackbar.Add($"{Language.T("Наряд")} {newOrder.Number} {Language.T("Наряд создан").ToLower()}!", Severity.Success);
 
             // Очищаем форму для следующего наряда
             newOrder = new WorkOrder { Type = "Плановый", Priority = "Обычный" };
@@ -186,7 +191,7 @@ namespace NaryadAi.Components.Pages.Master
             try
             {
                 await WorkOrderService.ReviewByMasterAsync(order.Id, currentMasterId, true, "Подтверждено мастером.");
-                Snackbar.Add($"Наряд {order.Number} закрыт", Severity.Success);
+                Snackbar.Add($"{Language.T("Наряд")} {order.Number} {Language.T("Закрыт").ToLower()}", Severity.Success);
                 await LoadData();
             }
             catch (InvalidOperationException ex) { Snackbar.Add(ex.Message, Severity.Warning); }
@@ -201,7 +206,7 @@ namespace NaryadAi.Components.Pages.Master
             {
                 await WorkOrderService.ReviewByMasterAsync(order.Id, currentMasterId, false,
                     string.IsNullOrWhiteSpace(explanation) ? "Требуется доработка по результату проверки." : explanation);
-                Snackbar.Add($"Наряд {order.Number} возвращён исполнителю", Severity.Info);
+                Snackbar.Add($"{Language.T("Наряд")} {order.Number} {Language.T("возвращён исполнителю")}", Severity.Info);
                 await LoadData();
             }
             catch (InvalidOperationException ex) { Snackbar.Add(ex.Message, Severity.Warning); }
@@ -218,7 +223,7 @@ namespace NaryadAi.Components.Pages.Master
         {
             if (GetReassignTarget(order.Id) is not int newExecutorId)
             {
-                Snackbar.Add("Выберите нового исполнителя", Severity.Warning);
+                Snackbar.Add(Language.T("Выберите нового исполнителя"), Severity.Warning);
                 return;
             }
             suppressNotifierRefresh = true;
@@ -226,7 +231,7 @@ namespace NaryadAi.Components.Pages.Master
             {
                 await WorkOrderService.ReassignAsync(order.Id, currentMasterId, newExecutorId, "Переназначено мастером.");
                 reassignTargets.Remove(order.Id);
-                Snackbar.Add($"Наряд {order.Number} переназначен", Severity.Success);
+                Snackbar.Add($"{Language.T("Наряд")} {order.Number} {Language.T("переназначен")}", Severity.Success);
                 await LoadData();
             }
             catch (InvalidOperationException ex) { Snackbar.Add(ex.Message, Severity.Warning); }
@@ -241,7 +246,7 @@ namespace NaryadAi.Components.Pages.Master
             {
                 await WorkOrderService.ChangePriorityAsync(order.Id, currentMasterId, priority, null);
                 priorityTargets.Remove(order.Id);
-                Snackbar.Add($"Приоритет наряда {order.Number}: {priority}", Severity.Success);
+                Snackbar.Add($"{Language.T("Приоритет")} {order.Number}: {Language.T(priority)}", Severity.Success);
                 await LoadData();
             }
             catch (InvalidOperationException ex) { Snackbar.Add(ex.Message, Severity.Warning); }

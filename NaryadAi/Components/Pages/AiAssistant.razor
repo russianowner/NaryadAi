@@ -1,14 +1,16 @@
-﻿@page "/ai-assistant"
+@page "/ai-assistant"
+@implements IDisposable
 @using NaryadAi.Services
 @using NaryadAi.Models
 @using MudBlazor
 @inject AiChatbotService ChatbotService
+@inject AppLanguageService Language
 @inject ISnackbar Snackbar
 
-<PageTitle>ИИ-Ассистент — НарядAI</PageTitle>
+<PageTitle>@Language.T("ИИ-Ассистент") — НарядAI</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
-    <MudText Typo="Typo.h5" Class="mb-4">ИИ-Ассистент Мастера</MudText>
+    <MudText Typo="Typo.h5" Class="mb-4 font-weight-bold">@Language.T("ИИ-Ассистент Мастера")</MudText>
     
     <MudPaper Elevation="1" Class="pa-4 d-flex flex-column" Style="height: 60vh; max-height: 600px;">
         <div class="flex-grow-1 overflow-y-auto mb-4 px-2" style="display: flex; flex-direction: column; gap: 12px;">
@@ -18,7 +20,7 @@
                     <MudPaper Elevation="0" Class="@(msg.Role == "user" ? "pa-3 bg-primary text-white rounded-lg" : "pa-3 bg-light rounded-lg")" Style="max-width: 80%;">
                         <MudText Typo="Typo.body1" Style="white-space: pre-wrap;">@msg.Content</MudText>
                     </MudPaper>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">@(msg.Role == "user" ? "Вы" : "ИИ-Ассистент")</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">@(msg.Role == "user" ? Language.T("Вы") : Language.T("ИИ-Ассистент"))</MudText>
                 </div>
             }
             @if (isTyping)
@@ -32,19 +34,40 @@
         </div>
         
         <div class="d-flex gap-2">
-            <MudTextField @bind-Value="inputMessage" Placeholder="Напишите вопрос (например: Кто сейчас свободен?)" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" OnKeyDown="HandleKeyDown" />
+            <MudTextField @bind-Value="inputMessage" Placeholder="@Language.T("Напишите вопрос (например: Кто сейчас свободен?)")" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" OnKeyDown="HandleKeyDown" />
             <MudIconButton Icon="@Icons.Material.Filled.Send" Color="Color.Primary" Variant="Variant.Filled" OnClick="SendMessageAsync" Disabled="@(isTyping || string.IsNullOrWhiteSpace(inputMessage))" />
         </div>
     </MudPaper>
 </MudContainer>
 
 @code {
-    private List<ChatMessage> messages = new()
-    {
-        new ChatMessage { Role = "assistant", Content = "Здравствуйте! Я ваш ИИ-ассистент. Я анализирую базу данных нарядов, оборудования и сотрудников. Вы можете спросить меня: кто сейчас свободен из слесарей, какие участки чаще ломаются, или попросить найти аномалии в расходе материалов." }
-    };
+    private List<ChatMessage> messages = new();
     private string inputMessage = "";
     private bool isTyping = false;
+
+    protected override void OnInitialized()
+    {
+        Language.Changed += OnLanguageChanged;
+        ResetGreeting();
+    }
+
+    private void ResetGreeting()
+    {
+        var greeting = Language.IsKazakh
+            ? "Сәлеметсіз бе! Мен сіздің ЖИ-көмекшіңізбін. Нарядтар, жабдықтар мен қызметкерлер базасын талдаймын. Кім бос, қандай жабдық жиі бұзылады немесе материалдар шығыны туралы сұрай аласыз."
+            : "Здравствуйте! Я ваш ИИ-ассистент. Я анализирую базу данных нарядов, оборудования и сотрудников. Вы можете спросить меня: кто сейчас свободен из слесарей, какие участки чаще ломаются, или попросить найти аномалии в расходе материалов.";
+        if (!messages.Any())
+        {
+            messages.Add(new ChatMessage { Role = "assistant", Content = greeting });
+        }
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Language.Changed -= OnLanguageChanged;
+    }
 
     private async Task HandleKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
     {

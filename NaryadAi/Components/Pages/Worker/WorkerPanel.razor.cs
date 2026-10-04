@@ -20,6 +20,7 @@ namespace NaryadAi.Components.Pages.Worker
         [Inject] private WorkOrderPhotoService PhotoService { get; set; } = default!;
         [Inject] private WorkOrderChangeNotifier ChangeNotifier { get; set; } = default!;
         [Inject] private Microsoft.JSInterop.IJSRuntime JSRuntime { get; set; } = default!;
+        [Inject] private AppLanguageService Language { get; set; } = default!;
 
         private bool isAuthorized = false;
         private int currentWorkerId = 0;
@@ -115,9 +116,17 @@ namespace NaryadAi.Components.Pages.Worker
             });
         }
 
+        protected override void OnInitialized()
+        {
+            Language.Changed += OnLanguageChanged;
+        }
+
+        private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
         public void Dispose()
         {
             disposed = true;
+            Language.Changed -= OnLanguageChanged;
             ChangeNotifier.Changed -= OnWorkOrderChanged;
         }
 
@@ -137,7 +146,7 @@ namespace NaryadAi.Components.Pages.Worker
             {
                 suppressNotifierRefresh = false;
             }
-            Snackbar.Add($"Статус изменен на: {newStatus}", Severity.Info);
+            Snackbar.Add($"{Language.T("Статус изменён на")}: {Language.T(newStatus)}", Severity.Info);
             await LoadMyTasks();
         }
 

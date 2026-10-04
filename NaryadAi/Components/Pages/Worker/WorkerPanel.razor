@@ -1,7 +1,5 @@
 @page "/worker"
 @using NaryadAi.Models
-@using NaryadAi.Services
-@inject AppLanguageService Language
 
 <PageTitle>@Language.T("Мои наряды") - НарядAI</PageTitle>
 
@@ -19,7 +17,7 @@ else
         {
             <MudText Typo="Typo.h5" Class="mb-4 font-weight-bold">@Language.T("Мои задачи")</MudText>
             <MudButton OnClick="RequestNotificationPermission" Variant="Variant.Outlined" FullWidth="true" Class="mb-4" StartIcon="@Icons.Material.Filled.Notifications">
-                Включить уведомления
+                @Language.T("Включить уведомления")
             </MudButton>
 
             @if (!myTasks.Any())
@@ -41,7 +39,7 @@ else
                         <MudCardHeader Class="pb-2">
                             <CardHeaderContent>
                                 <div class="d-flex justify-space-between align-center">
-                                    <MudText Typo="Typo.subtitle1" Style="font-weight: 700;">Наряд @task.Number</MudText>
+                                    <MudText Typo="Typo.subtitle1" Style="font-weight: 700;">@Language.T("Наряд") @task.Number</MudText>
                                     <MudChip T="string" Size="Size.Small" Color="@(isEmergency ? Color.Error : Color.Primary)" Variant="Variant.Filled">
                                         @Language.T(task.Status)
                                     </MudChip>

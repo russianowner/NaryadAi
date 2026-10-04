@@ -9,7 +9,7 @@ using NaryadAi.Services;
 
 namespace NaryadAi.Components.Pages.Reports;
 
-public partial class Reports : ComponentBase
+public partial class Reports : ComponentBase, IDisposable
 {
     [Inject] private AppDbContext DbContext { get; set; } = default!;
     [Inject] private Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage.ProtectedLocalStorage BrowserStorage { get; set; } = default!;
@@ -250,4 +250,16 @@ public partial class Reports : ComponentBase
 
     private static bool IsOverdue(WorkOrder order) => order.Deadline < DateTime.UtcNow
         && order.ClosedAt is null && order.CancelledAt is null && order.RejectedAt is null;
+
+    protected override void OnInitialized()
+    {
+        Language.Changed += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Language.Changed -= OnLanguageChanged;
+    }
 }
