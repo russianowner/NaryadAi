@@ -1,4 +1,6 @@
 ﻿@inherits LayoutComponentBase
+@using NaryadAi.Services
+@inject AppLanguageService Language
 
 <MudThemeProvider />
 <MudDialogProvider />
@@ -12,7 +14,13 @@
         <MudText Typo="Typo.h6">НарядAI</MudText>
         <MudSpacer />
 
-        <MudIconButton Href="/profile" Class="pa-0 ml-3">
+        <MudIconButton OnClick="ToggleLanguage" Class="pa-0 ml-1 mr-3" Title="Сменить язык">
+            <MudAvatar Color="Color.Surface" Variant="Variant.Filled" Size="Size.Small">
+                <MudText Typo="Typo.button" Style="font-weight:bold; color: #1976d2">@Language.Current</MudText>
+            </MudAvatar>
+        </MudIconButton>
+
+        <MudIconButton Href="/profile" Class="pa-0">
             <MudAvatar Color="Color.Secondary" Variant="Variant.Filled" Size="Size.Medium">АЕ</MudAvatar>
         </MudIconButton>
     </MudAppBar>
@@ -34,4 +42,3 @@
         @Body
     </MudMainContent>
 </MudLayout>
-
