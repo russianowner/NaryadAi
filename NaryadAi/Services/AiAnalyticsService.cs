@@ -8,19 +8,17 @@ public class AiAnalyticsService(IHttpClientFactory httpClientFactory, IConfigura
 {
     public async Task<string> GenerateShiftSummaryAsync(IReadOnlyList<WorkOrder> orders, CancellationToken cancellationToken = default)
     {
-        var endpoint = configuration["Ai:AnthropicEndpoint"];
-        var apiKey = configuration["Ai:ApiKey"];
-        if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(apiKey))
+        var groqKey = configuration["Ai:GroqApiKey"];
+        if (string.IsNullOrWhiteSpace(groqKey))
         {
-            return "ИИ-аналитика недоступна (не настроен API ключ). За выбранный период обработано нарядов: " + orders.Count;
+            return "ИИ-аналитика недоступна (не настроен API ключ Groq). За выбранный период обработано нарядов: " + orders.Count;
         }
 
         try
         {
             var client = httpClientFactory.CreateClient(nameof(AiAnalyticsService));
-            using var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
-            request.Headers.Add("x-api-key", apiKey);
-            request.Headers.Add("anthropic-version", "2023-06-01");
+            using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.groq.com/openai/v1/chat/completions");
+            request.Headers.Add("Authorization", $"Bearer {groqKey}");
 
             var stats = new StringBuilder();
             stats.AppendLine("Всего нарядов: " + orders.Count);
@@ -39,21 +37,25 @@ public class AiAnalyticsService(IHttpClientFactory httpClientFactory, IConfigura
             
             request.Content = new StringContent(JsonSerializer.Serialize(new
             {
-                model = configuration["Ai:Model"] ?? "claude-3-5-haiku-latest",
+                model = "llama-3.2-11b-vision-preview",
                 max_tokens = 300,
-                system = systemPrompt,
-                messages = new[] { new { role = "user", content = "Статистика смены:\n" + stats.ToString() } }
+                messages = new[] 
+                { 
+                    new { role = "system", content = systemPrompt },
+                    new { role = "user", content = "Статистика смены:\n" + stats.ToString() } 
+                }
             }), Encoding.UTF8, "application/json");
 
             using var response = await client.SendAsync(request, cancellationToken);
             response.EnsureSuccessStatusCode();
-            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-            var text = document.RootElement.GetProperty("content")[0].GetProperty("text").GetString() ?? "Нет данных";
+            var jsonResponse = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var document = JsonDocument.Parse(jsonResponse);
+            var text = document.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString() ?? "Нет данных";
             return text;
         }
-        catch
+        catch (Exception ex)
         {
-            return "Не удалось сгенерировать сводку из-за ошибки сети или таймаута ИИ. Всего нарядов: " + orders.Count;
+            return "Не удалось сгенерировать сводку из-за ошибки сети или таймаута ИИ. Ошибка: " + ex.Message + ". Всего нарядов: " + orders.Count;
         }
     }
 }
