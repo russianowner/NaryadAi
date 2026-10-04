@@ -1,0 +1,82 @@
+﻿@page "/ai-assistant"
+@using NaryadAi.Services
+@using NaryadAi.Models
+@using MudBlazor
+@inject AiChatbotService ChatbotService
+@inject ISnackbar Snackbar
+
+<PageTitle>ИИ-Ассистент — НарядAI</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudText Typo="Typo.h5" Class="mb-4">ИИ-Ассистент Мастера</MudText>
+    
+    <MudPaper Elevation="1" Class="pa-4 d-flex flex-column" Style="height: 60vh; max-height: 600px;">
+        <div class="flex-grow-1 overflow-y-auto mb-4 px-2" style="display: flex; flex-direction: column; gap: 12px;">
+            @foreach (var msg in messages)
+            {
+                <div style="display: flex; flex-direction: column; align-items: @(msg.Role == "user" ? "flex-end" : "flex-start");">
+                    <MudPaper Elevation="0" Class="@(msg.Role == "user" ? "pa-3 bg-primary text-white rounded-lg" : "pa-3 bg-light rounded-lg")" Style="max-width: 80%;">
+                        <MudText Typo="Typo.body1" Style="white-space: pre-wrap;">@msg.Content</MudText>
+                    </MudPaper>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">@(msg.Role == "user" ? "Вы" : "ИИ-Ассистент")</MudText>
+                </div>
+            }
+            @if (isTyping)
+            {
+                <div style="display: flex; flex-direction: column; align-items: flex-start;">
+                    <MudPaper Elevation="0" Class="pa-3 bg-light rounded-lg">
+                        <MudProgressCircular Color="Color.Default" Size="Size.Small" Indeterminate="true" />
+                    </MudPaper>
+                </div>
+            }
+        </div>
+        
+        <div class="d-flex gap-2">
+            <MudTextField @bind-Value="inputMessage" Placeholder="Напишите вопрос (например: Кто сейчас свободен?)" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" OnKeyDown="HandleKeyDown" />
+            <MudIconButton Icon="@Icons.Material.Filled.Send" Color="Color.Primary" Variant="Variant.Filled" OnClick="SendMessageAsync" Disabled="@(isTyping || string.IsNullOrWhiteSpace(inputMessage))" />
+        </div>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<ChatMessage> messages = new()
+    {
+        new ChatMessage { Role = "assistant", Content = "Здравствуйте! Я ваш ИИ-ассистент. Я анализирую базу данных нарядов, оборудования и сотрудников. Вы можете спросить меня: кто сейчас свободен из слесарей, какие участки чаще ломаются, или попросить найти аномалии в расходе материалов." }
+    };
+    private string inputMessage = "";
+    private bool isTyping = false;
+
+    private async Task HandleKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(inputMessage) && !isTyping)
+        {
+            await SendMessageAsync();
+        }
+    }
+
+    private async Task SendMessageAsync()
+    {
+        if (string.IsNullOrWhiteSpace(inputMessage)) return;
+
+        var userText = inputMessage.Trim();
+        inputMessage = "";
+        messages.Add(new ChatMessage { Role = "user", Content = userText });
+        isTyping = true;
+        StateHasChanged();
+
+        try
+        {
+            var response = await ChatbotService.AskAsync(userText);
+            messages.Add(new ChatMessage { Role = "assistant", Content = response });
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Ошибка соединения с ИИ: " + ex.Message, Severity.Error);
+        }
+        finally
+        {
+            isTyping = false;
+            StateHasChanged();
+        }
+    }
+}

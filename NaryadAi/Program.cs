@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.DataProtection;
 using MudBlazor.Services;
 using NaryadAi.Components;
@@ -27,6 +27,7 @@ if (!string.IsNullOrWhiteSpace(dataProtectionKeysPath))
 }
 builder.Services.AddScoped<AiReviewService>();
 builder.Services.AddScoped<AiAnalyticsService>();
+builder.Services.AddScoped<AiChatbotService>();
 builder.Services.AddScoped<WorkOrderService>();
 builder.Services.AddScoped<WorkOrderPhotoService>();
 builder.Services.AddScoped<EmployeeRatingService>();
@@ -87,3 +88,4 @@ if (!isDesignTime)
 }
 
 app.Run();
+

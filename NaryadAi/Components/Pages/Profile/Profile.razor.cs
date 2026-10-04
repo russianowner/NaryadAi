@@ -1,9 +1,10 @@
-using Microsoft.AspNetCore.Components;
+﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor;
 using NaryadAi.Data;
 using NaryadAi.Models;
+using NaryadAi.Services;
 
 namespace NaryadAi.Components.Pages.Profile;
 
@@ -12,6 +13,7 @@ public partial class Profile : ComponentBase
     [Inject] private AppDbContext DbContext { get; set; } = default!;
     [Inject] private ProtectedLocalStorage BrowserStorage { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private EmployeeRatingService RatingService { get; set; } = default!;
 
     private Employee? employee;
     private List<WorkOrder> recentOrders = new();
@@ -22,6 +24,7 @@ public partial class Profile : ComponentBase
     private int completedOrders;
     private int overdueOrders;
     private int reworkOrders;
+    private EmployeeRating? rating;
 
     private string Initials
     {
@@ -99,6 +102,11 @@ public partial class Profile : ComponentBase
             order.Deadline < DateTime.UtcNow &&
             order.Status is not ("Исполнено" or "Закрыт" or "Отклонен"));
         recentOrders = orders.Take(6).ToList();
+        
+        if (currentEmployee.Role == "Worker")
+        {
+            rating = await RatingService.CalculateAsync(currentEmployee.Id);
+        }
     }
 
     private static bool IsActive(string status) => status is
