@@ -17,6 +17,7 @@ public partial class Reports : ComponentBase
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private IJSRuntime JavaScript { get; set; } = default!;
     [Inject] private EmployeeRatingService RatingService { get; set; } = default!;
+    [Inject] private AiAnalyticsService AiAnalytics { get; set; } = default!;
     [Inject] private AppLanguageService Language { get; set; } = default!;
 
     private bool isAuthorized;
@@ -26,6 +27,8 @@ public partial class Reports : ComponentBase
     private DateTime? endDate = DateTime.Today;
     private List<WorkOrder> reportOrders = [];
     private List<Equipment> reportEquipment = [];
+    private List<(Employee Worker, EmployeeRating Rating)> reportRatings = [];
+    private string aiSummary = "Генерация сводки...";
     private int IdleEquipmentCount => reportEquipment.Count(e =>
         !reportOrders.Any(o => o.EquipmentId == e.Id && IsActive(o.Status)));
 
@@ -72,7 +75,20 @@ public partial class Reports : ComponentBase
                 .OrderByDescending(x => x.CreatedAt)
                 .ToListAsync();
             reportEquipment = await DbContext.Equipments.AsNoTracking().ToListAsync();
+            
+            var workers = await DbContext.Employees.AsNoTracking().Where(x => x.Role == "Worker").OrderBy(x => x.FullName).ToListAsync();
+            reportRatings.Clear();
+            foreach (var worker in workers)
+            {
+                var r = await RatingService.CalculateAsync(worker.Id);
+                reportRatings.Add((worker, r));
+            }
+            reportRatings = reportRatings.OrderByDescending(r => r.Rating.Score).ToList();
+            
+            aiSummary = "Генерация сводки...";
             reportLoaded = true;
+            _ = InvokeAsync(StateHasChanged);
+            aiSummary = await AiAnalytics.GenerateShiftSummaryAsync(reportOrders);
         }
         catch (Exception ex)
         {

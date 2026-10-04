@@ -1,4 +1,4 @@
-﻿@page "/worker"
+@page "/worker"
 @using NaryadAi.Models
 
 <PageTitle>Мои наряды - НарядAI</PageTitle>
@@ -16,6 +16,7 @@ else
         @if (currentView == "List")
         {
             <MudText Typo="Typo.h5" Class="mb-4 font-weight-bold">Мои задачи</MudText>
+            <MudButton OnClick="RequestNotificationPermission" Variant="Variant.Outlined" FullWidth="true" Class="mb-4" StartIcon="@Icons.Material.Filled.Notifications">Включить уведомления</MudButton>
 
             @if (!myTasks.Any())
             {

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="utf-8" />
@@ -31,6 +31,43 @@
                         .catch(err => console.error('Ошибка регистрации Service Worker:', err));
                 });
             }
+
+            window.naryadNotifications = {
+                requestPermission: async function() {
+                    if (!('Notification' in window)) return false;
+                    if (Notification.permission === 'granted') return true;
+                    const permission = await Notification.requestPermission();
+                    return permission === 'granted';
+                },
+                show: function(title, options) {
+                    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+                    
+                    if (options && options.data === 'emergency') {
+                        try {
+                            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                            const osc = ctx.createOscillator();
+                            const gain = ctx.createGain();
+                            osc.connect(gain);
+                            gain.connect(ctx.destination);
+                            osc.type = 'square';
+                            osc.frequency.setValueAtTime(440, ctx.currentTime);
+                            osc.frequency.setValueAtTime(880, ctx.currentTime + 0.2);
+                            osc.frequency.setValueAtTime(440, ctx.currentTime + 0.4);
+                            osc.frequency.setValueAtTime(880, ctx.currentTime + 0.6);
+                            gain.gain.setValueAtTime(0.5, ctx.currentTime);
+                            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.5);
+                            osc.start();
+                            osc.stop(ctx.currentTime + 1.5);
+                        } catch (e) { console.error(e); }
+                    }
+
+                    const notif = new Notification(title, options);
+                    notif.onclick = function() {
+                        window.focus();
+                        notif.close();
+                    };
+                }
+            };
     </script>
 </body>
 </html>

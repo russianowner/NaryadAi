@@ -35,35 +35,83 @@ else
             </div>
         </MudPaper>
 
-        @if (reportOrders.Count > 0)
+        @if (reportLoaded)
         {
-            <div class="report-summary">
-                <MudPaper Class="pa-4 report-stat"><span>@Language.T("Наряды")</span><strong>@reportOrders.Count</strong></MudPaper>
-                <MudPaper Class="pa-4 report-stat"><span>@Language.T("Закрыто")</span><strong>@reportOrders.Count(x => x.ClosedAt != null)</strong></MudPaper>
-                <MudPaper Class="pa-4 report-stat"><span>@Language.T("Просрочено")</span><strong>@reportOrders.Count(IsOverdue)</strong></MudPaper>
-                <MudPaper Class="pa-4 report-stat"><span>@Language.T("Оборудование в простое")</span><strong>@IdleEquipmentCount</strong></MudPaper>
-            </div>
+            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+                <MudTabPanel Text="@Language.T("Сводка смен")" Icon="@Icons.Material.Filled.Dashboard">
+                    <div class="report-summary mb-4">
+                        <MudPaper Class="pa-4 report-stat"><span>@Language.T("Выдано")</span><strong>@reportOrders.Count</strong></MudPaper>
+                        <MudPaper Class="pa-4 report-stat"><span>@Language.T("Выполнено")</span><strong>@reportOrders.Count(x => x.ClosedAt != null)</strong></MudPaper>
+                        <MudPaper Class="pa-4 report-stat"><span>@Language.T("Просрочено")</span><strong>@reportOrders.Count(IsOverdue)</strong></MudPaper>
+                        <MudPaper Class="pa-4 report-stat"><span>@Language.T("Отклонено")</span><strong>@reportOrders.Count(x => x.Status == "Отклонён")</strong></MudPaper>
+                        <MudPaper Class="pa-4 report-stat"><span>@Language.T("Простои (шт)")</span><strong>@IdleEquipmentCount</strong></MudPaper>
+                    </div>
 
-            <MudPaper Elevation="2" Class="pa-3 rounded-lg mt-4">
-                <MudTable Items="reportOrders" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
-                    <HeaderContent>
-                        <MudTh>@Language.T("Номер")</MudTh>
-                        <MudTh>@Language.T("Участок")</MudTh>
-                        <MudTh>@Language.T("Оборудование")</MudTh>
-                        <MudTh>@Language.T("Исполнитель")</MudTh>
-                        <MudTh>@Language.T("Статус")</MudTh>
-                        <MudTh>@Language.T("Срок")</MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="@Language.T("Номер")">@context.Number</MudTd>
-                        <MudTd DataLabel="@Language.T("Участок")">@(context.Site?.Name ?? context.Location)</MudTd>
-                        <MudTd DataLabel="@Language.T("Оборудование")">@context.Equipment?.Name</MudTd>
-                        <MudTd DataLabel="@Language.T("Исполнитель")">@context.Executor?.FullName</MudTd>
-                        <MudTd DataLabel="@Language.T("Статус")">@Language.T(context.Status)</MudTd>
-                        <MudTd DataLabel="@Language.T("Срок")">@context.Deadline.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</MudTd>
-                    </RowTemplate>
-                </MudTable>
-            </MudPaper>
+                    <MudPaper Elevation="0" Outlined="true" Class="pa-4 mt-4 bg-light">
+                        <MudText Typo="Typo.h6" Class="mb-2">Итоговая сводка (ИИ-генерация)</MudText>
+                        <MudText Typo="Typo.body2">
+                            @if (aiSummary == "Генерация сводки...")
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2"/>
+                                @aiSummary
+                            }
+                            else
+                            {
+                                @aiSummary
+                            }
+                        </MudText>
+                    </MudPaper>
+                </MudTabPanel>
+
+                <MudTabPanel Text="@Language.T("Рейтинг исполнителей")" Icon="@Icons.Material.Filled.Star">
+                    <MudTable Items="reportRatings" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
+                        <HeaderContent>
+                            <MudTh>@Language.T("Сотрудник")</MudTh>
+                            <MudTh>@Language.T("Рейтинг")</MudTh>
+                            <MudTh>@Language.T("Выполнено")</MudTh>
+                            <MudTh>@Language.T("В срок")</MudTh>
+                            <MudTh>@Language.T("Доработки")</MudTh>
+                            <MudTh>@Language.T("Отказы")</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="@Language.T("Сотрудник")">
+                                <strong>@context.Worker.FullName</strong><br/>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Worker.Brigade</MudText>
+                            </MudTd>
+                            <MudTd DataLabel="@Language.T("Рейтинг")">
+                                <MudChip T="string" Color="@(context.Rating.Score >= 80 ? Color.Success : context.Rating.Score >= 60 ? Color.Warning : Color.Error)">
+                                    @context.Rating.Score.ToString("0.0")
+                                </MudChip>
+                            </MudTd>
+                            <MudTd DataLabel="@Language.T("Выполнено")">@context.Rating.ClosedOrders</MudTd>
+                            <MudTd DataLabel="@Language.T("В срок")">@context.Rating.OnTimeRate.ToString("0.0")%</MudTd>
+                            <MudTd DataLabel="@Language.T("Доработки")">@context.Rating.ReworkRate.ToString("0.0")%</MudTd>
+                            <MudTd DataLabel="@Language.T("Отказы")">@context.Rating.RejectionRate.ToString("0.0")%</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudTabPanel>
+
+                <MudTabPanel Text="@Language.T("Все наряды")" Icon="@Icons.Material.Filled.List">
+                    <MudTable Items="reportOrders" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
+                        <HeaderContent>
+                            <MudTh>@Language.T("Номер")</MudTh>
+                            <MudTh>@Language.T("Участок")</MudTh>
+                            <MudTh>@Language.T("Оборудование")</MudTh>
+                            <MudTh>@Language.T("Исполнитель")</MudTh>
+                            <MudTh>@Language.T("Статус")</MudTh>
+                            <MudTh>@Language.T("Срок")</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="@Language.T("Номер")">@context.Number</MudTd>
+                            <MudTd DataLabel="@Language.T("Участок")">@(context.Site?.Name ?? context.Location)</MudTd>
+                            <MudTd DataLabel="@Language.T("Оборудование")">@context.Equipment?.Name</MudTd>
+                            <MudTd DataLabel="@Language.T("Исполнитель")">@context.Executor?.FullName</MudTd>
+                            <MudTd DataLabel="@Language.T("Статус")">@Language.T(context.Status)</MudTd>
+                            <MudTd DataLabel="@Language.T("Срок")">@context.Deadline.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudTabPanel>
+            </MudTabs>
         }
         else if (reportLoaded)
         {

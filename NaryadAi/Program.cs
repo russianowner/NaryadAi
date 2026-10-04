@@ -26,6 +26,7 @@ if (!string.IsNullOrWhiteSpace(dataProtectionKeysPath))
         dataProtection.ProtectKeysWithDpapi();
 }
 builder.Services.AddScoped<AiReviewService>();
+builder.Services.AddScoped<AiAnalyticsService>();
 builder.Services.AddScoped<WorkOrderService>();
 builder.Services.AddScoped<WorkOrderPhotoService>();
 builder.Services.AddScoped<EmployeeRatingService>();
