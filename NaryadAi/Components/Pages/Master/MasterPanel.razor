@@ -1,4 +1,4 @@
-@page "/master"
+﻿@page "/master"
 @using NaryadAi.Models
 
 <PageTitle>Панель мастера - НарядAI</PageTitle>
@@ -29,15 +29,21 @@ else
                 </MudSelect>
             </div>
 
-            <MudTextField @bind-Value="newOrder.Description" Label="Описание проблемы" Lines="3" Variant="Variant.Outlined" Class="mb-4" />
+            <div class="d-flex align-start gap-2 mb-4">
+                <MudTextField @bind-Value="newOrder.Description" Label="Описание проблемы" Lines="3" Variant="Variant.Outlined" Class="flex-grow-1" />
+                <MudIconButton Icon="@Icons.Material.Filled.Mic" Color="Color.Primary" Variant="Variant.Filled" OnClick="StartVoiceInput" title="Голосовой ввод" Class="mt-2" />
+            </div>
 
             <!-- Выбор оборудования тянется из базы -->
-            <MudSelect T="int" @bind-Value="newOrder.EquipmentId" Label="Оборудование" Variant="Variant.Outlined" Class="mb-4" AnchorOrigin="Origin.BottomCenter">
-                @foreach (var eq in equipmentList)
-                {
-                    <MudSelectItem Value="@eq.Id">@eq.Name (@eq.Location)</MudSelectItem>
-                }
-            </MudSelect>
+            <div class="d-flex align-start gap-2 mb-4">
+                <MudSelect T="int" @bind-Value="newOrder.EquipmentId" Label="Оборудование" Variant="Variant.Outlined" Class="flex-grow-1" AnchorOrigin="Origin.BottomCenter">
+                    @foreach (var eq in equipmentList)
+                    {
+                        <MudSelectItem Value="@eq.Id">@eq.Name (@eq.Location)</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudIconButton Icon="@Icons.Material.Filled.QrCodeScanner" Color="Color.Secondary" Variant="Variant.Filled" OnClick="ScanQrCode" title="Сканировать QR" Class="mt-2" />
+            </div>
 
             <!-- Выбор только Слесарей из базы -->
             <MudSelect T="int?" @bind-Value="newOrder.ExecutorId" Label="Назначить исполнителя" Variant="Variant.Outlined" Class="mb-4" AnchorOrigin="Origin.BottomCenter">

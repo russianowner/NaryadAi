@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="utf-8" />
@@ -21,8 +21,56 @@
     <Routes @rendermode="InteractiveServer" />
 
     <ReconnectModal />
-    <script src="@Assets["_framework/blazor.web.js"]"></script>
-    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script src="@Assets["_framework/blazor.web.js"]">        window.naryadHardware = {
+            startListening: function (dotNetReference, methodName) {
+                if (!('webkitSpeechRecognition' in window)) {
+                    alert('Ваш браузер не поддерживает голосовой ввод');
+                    return;
+                }
+                var recognition = new webkitSpeechRecognition();
+                recognition.lang = 'ru-RU';
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+
+                recognition.onresult = function (event) {
+                    var text = event.results[0][0].transcript;
+                    dotNetReference.invokeMethodAsync(methodName, text);
+                };
+                recognition.start();
+            },
+            scanQrCode: function (dotNetReference, methodName) {
+                alert('Демо-режим: Сканируется QR-код на оборудовании...');
+                setTimeout(() => {
+                    dotNetReference.invokeMethodAsync(methodName, 1);
+                }, 1000);
+            }
+        };
+    </script>
+    <script src="_content/MudBlazor/MudBlazor.min.js">        window.naryadHardware = {
+            startListening: function (dotNetReference, methodName) {
+                if (!('webkitSpeechRecognition' in window)) {
+                    alert('Ваш браузер не поддерживает голосовой ввод');
+                    return;
+                }
+                var recognition = new webkitSpeechRecognition();
+                recognition.lang = 'ru-RU';
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+
+                recognition.onresult = function (event) {
+                    var text = event.results[0][0].transcript;
+                    dotNetReference.invokeMethodAsync(methodName, text);
+                };
+                recognition.start();
+            },
+            scanQrCode: function (dotNetReference, methodName) {
+                alert('Демо-режим: Сканируется QR-код на оборудовании...');
+                setTimeout(() => {
+                    dotNetReference.invokeMethodAsync(methodName, 1);
+                }, 1000);
+            }
+        };
+    </script>
     <script>
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
@@ -68,6 +116,31 @@
                     };
                 }
             };
+            window.naryadHardware = {
+            startListening: function (dotNetReference, methodName) {
+                if (!('webkitSpeechRecognition' in window)) {
+                    alert('Ваш браузер не поддерживает голосовой ввод');
+                    return;
+                }
+                var recognition = new webkitSpeechRecognition();
+                recognition.lang = 'ru-RU';
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+
+                recognition.onresult = function (event) {
+                    var text = event.results[0][0].transcript;
+                    dotNetReference.invokeMethodAsync(methodName, text);
+                };
+                recognition.start();
+            },
+            scanQrCode: function (dotNetReference, methodName) {
+                alert('Демо-режим: Сканируется QR-код на оборудовании...');
+                setTimeout(() => {
+                    dotNetReference.invokeMethodAsync(methodName, 1);
+                }, 1000);
+            }
+        };
     </script>
 </body>
 </html>
+

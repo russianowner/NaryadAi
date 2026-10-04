@@ -1,6 +1,7 @@
-using Microsoft.AspNetCore.Components;
+﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.JSInterop;
 using MudBlazor;
 using NaryadAi.Data;
 using NaryadAi.Models;
@@ -14,6 +15,7 @@ namespace NaryadAi.Components.Pages.Master
         [Inject] private ProtectedLocalStorage BrowserStorage { get; set; } = default!;
         [Inject] private NavigationManager Navigation { get; set; } = default!;
         [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
         [Inject] private WorkOrderService WorkOrderService { get; set; } = default!;
         [Inject] private WorkOrderChangeNotifier ChangeNotifier { get; set; } = default!;
 
@@ -100,7 +102,42 @@ namespace NaryadAi.Components.Pages.Master
             });
         }
 
-        public void Dispose()
+            private DotNetObjectReference<MasterPanel>? dotNetRef;
+    
+    protected override void OnInitialized()
+    {
+        dotNetRef = DotNetObjectReference.Create(this);
+    }
+
+    private async Task StartVoiceInput()
+    {
+        try { await JSRuntime.InvokeVoidAsync("naryadHardware.startListening", dotNetRef, nameof(OnVoiceInputResult)); } catch {}
+    }
+
+    [JSInvokable]
+    public void OnVoiceInputResult(string text)
+    {
+        newOrder.Description = (newOrder.Description + " " + text).Trim();
+        StateHasChanged();
+    }
+
+    private async Task ScanQrCode()
+    {
+        try { await JSRuntime.InvokeVoidAsync("naryadHardware.scanQrCode", dotNetRef, nameof(OnQrCodeResult)); } catch {}
+    }
+
+    [JSInvokable]
+    public void OnQrCodeResult(int equipmentId)
+    {
+        if (equipmentList.Any(e => e.Id == equipmentId))
+        {
+            newOrder.EquipmentId = equipmentId;
+            StateHasChanged();
+            Snackbar.Add("Оборудование распознано по QR!", Severity.Success);
+        }
+    }
+
+    public void Dispose()
         {
             disposed = true;
             ChangeNotifier.Changed -= OnWorkOrderChanged;
@@ -227,3 +264,4 @@ namespace NaryadAi.Components.Pages.Master
         };
     }
 }
+

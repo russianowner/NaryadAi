@@ -50,7 +50,7 @@ public class AiChatbotService(IHttpClientFactory httpClientFactory, IConfigurati
 
         request.Content = new StringContent(JsonSerializer.Serialize(new
         {
-            model = "llama-3.2-11b-vision-preview",
+            model = "qwen/qwen3.8-27b",
             max_tokens = 500,
             messages = new[] 
             { 
@@ -63,7 +63,7 @@ public class AiChatbotService(IHttpClientFactory httpClientFactory, IConfigurati
         if (!response.IsSuccessStatusCode)
         {
             var err = await response.Content.ReadAsStringAsync(cancellationToken);
-            return "Ошибка Groq API: " + response.StatusCode;
+            return "Ошибка Groq API: " + response.StatusCode + " - " + err;
         }
 
         var jsonResponse = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -71,3 +71,8 @@ public class AiChatbotService(IHttpClientFactory httpClientFactory, IConfigurati
         return document.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString() ?? "Нет ответа";
     }
 }
+
+
+
+
+

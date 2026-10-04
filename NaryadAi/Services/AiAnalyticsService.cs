@@ -37,7 +37,7 @@ public class AiAnalyticsService(IHttpClientFactory httpClientFactory, IConfigura
             
             request.Content = new StringContent(JsonSerializer.Serialize(new
             {
-                model = "llama-3.2-11b-vision-preview",
+                model = "qwen/qwen3.8-27b",
                 max_tokens = 300,
                 messages = new[] 
                 { 
@@ -59,3 +59,7 @@ public class AiAnalyticsService(IHttpClientFactory httpClientFactory, IConfigura
         }
     }
 }
+
+
+
+
