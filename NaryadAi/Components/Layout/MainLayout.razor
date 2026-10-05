@@ -8,35 +8,76 @@
 <MudPopoverProvider />
 
 <MudLayout>
-    <MudAppBar Color="Color.Primary" Fixed="true" Elevation="2">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@ToggleDrawer" />
+    <MudAppBar Color="Color.Primary"
+               Fixed="true"
+               Elevation="2">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                       Color="Color.Inherit"
+                       Edge="Edge.Start"
+                       OnClick="@ToggleDrawer" />
         <MudSpacer />
-        <MudText Typo="Typo.h6" Class="font-weight-bold">НарядAI</MudText>
+        <div class="app-brand">
+            <img src="/Logo/NaryadAiLogo.png"
+                 alt="НарядAI"
+                 class="app-brand-logo" />
+            <MudText Typo="Typo.h6"
+                     Class="font-weight-bold">
+                НарядAI
+            </MudText>
+        </div>
         <MudSpacer />
-
-        <MudIconButton OnClick="ToggleLanguage" Class="pa-0 ml-1 mr-3" Title="Сменить язык">
-            <MudAvatar Color="Color.Surface" Variant="Variant.Filled" Size="Size.Small">
-                <MudText Typo="Typo.button" Style="font-weight:bold; color: #1976d2">@Language.Current</MudText>
+        <MudIconButton OnClick="ToggleLanguage"
+                       Class="pa-0 ml-1 mr-3"
+                       Title="Сменить язык">
+            <MudAvatar Color="Color.Surface"
+                       Variant="Variant.Filled"
+                       Size="Size.Small">
+                <MudText Typo="Typo.button"
+                         Style="font-weight:bold; color:#1976d2">
+                    @Language.Current
+                </MudText>
             </MudAvatar>
         </MudIconButton>
-
-        <MudIconButton Href="/profile" Class="pa-0">
-            <MudAvatar Color="Color.Secondary" Variant="Variant.Filled" Size="Size.Medium">@Initials</MudAvatar>
+        <MudIconButton Href="/profile"
+                       Class="pa-0">
+            <MudAvatar Color="Color.Secondary"
+                       Variant="Variant.Filled"
+                       Size="Size.Medium">
+                @Initials
+            </MudAvatar>
         </MudIconButton>
     </MudAppBar>
-
-    <MudDrawer @bind-Open="@_drawerOpen" Elevation="2" ClipMode="DrawerClipMode.Always">
-        <MudDrawerHeader Class="pa-4 d-flex flex-column align-center" Style="background-color: #1976d2; color: white;">
-            <MudAvatar Color="Color.Secondary" Size="Size.Large" Class="mb-2">@Initials</MudAvatar>
-            <MudText Typo="Typo.subtitle1" Class="font-weight-bold text-center">@(userName ?? Language.T("Гость"))</MudText>
-            <MudText Typo="Typo.caption" Class="text-center" Style="opacity: 0.8;">@RoleName</MudText>
+    <MudDrawer @bind-Open="@_drawerOpen"
+               Elevation="2"
+               ClipMode="DrawerClipMode.Always">
+        <MudDrawerHeader Class="pa-4 d-flex flex-column align-center"
+                         Style="background-color:#1976d2; color:white;">
+            <MudAvatar Color="Color.Secondary"
+                       Size="Size.Large"
+                       Class="mb-2">
+                @Initials
+            </MudAvatar>
+            <MudText Typo="Typo.subtitle1"
+                     Class="font-weight-bold text-center">
+                @(userName ?? Language.T("Гость"))
+            </MudText>
+            <MudText Typo="Typo.caption"
+                     Class="text-center"
+                     Style="opacity:0.8;">
+                @RoleName
+            </MudText>
         </MudDrawerHeader>
-
         <MudNavMenu Class="pt-2">
             @if (userRole is "Admin")
             {
-                <MudNavLink Href="/admin/employees" Icon="@Icons.Material.Filled.People">@Language.T("Персонал")</MudNavLink>
-                <MudNavLink Href="/admin/dictionaries" Icon="@Icons.Material.Filled.Book">@Language.T("Справочники")</MudNavLink>
+                <MudNavLink Href="/admin/employees"
+                            Icon="@Icons.Material.Filled.People">
+                    @Language.T("Персонал")
+                </MudNavLink>
+                <MudNavLink Href="/admin/dictionaries"
+                            Icon="@Icons.Material.Filled.Book">
+                    @Language.T("Справочники")
+                </MudNavLink>
             }
             @if (userRole is "Manager")
             {
@@ -49,7 +90,6 @@
                     @Language.T("Отчёты")
                 </MudNavLink>
             }
-
             @if (userRole is "Master")
             {
                 <MudNavLink Href="/master"
@@ -65,29 +105,29 @@
                     @Language.T("ИИ-Ассистент")
                 </MudNavLink>
             }
-            @if (userRole is "Admin")
-            {
-                <MudNavLink Href="/admin/employees"
-                            Icon="@Icons.Material.Filled.People">
-                    @Language.T("Персонал")
-                </MudNavLink>
-                <MudNavLink Href="/admin/dictionaries"
-                            Icon="@Icons.Material.Filled.Book">
-                    @Language.T("Справочники")
-                </MudNavLink>
-            }
             @if (userRole is "Worker")
             {
-                <MudNavLink Href="/worker" Icon="@Icons.Material.Filled.ListAlt">@Language.T("Мои наряды")</MudNavLink>
+                <MudNavLink Href="/worker"
+                            Icon="@Icons.Material.Filled.ListAlt">
+                    @Language.T("Мои наряды")
+                </MudNavLink>
             }
-            <MudNavLink Href="/profile" Icon="@Icons.Material.Filled.Person">@Language.T("Профиль")</MudNavLink>
-
+            <MudNavLink Href="/profile"
+                        Icon="@Icons.Material.Filled.Person">
+                @Language.T("Профиль")
+            </MudNavLink>
             <MudDivider Class="my-2" />
-            <MudNavLink OnClick="Logout" Icon="@Icons.Material.Filled.Logout" Color="Color.Error" Style="cursor: pointer;">@Language.T("Выйти")</MudNavLink>
+            <MudNavLink OnClick="Logout"
+                        Icon="@Icons.Material.Filled.Logout"
+                        Color="Color.Error"
+                        Style="cursor:pointer;">
+                @Language.T("Выйти")
+            </MudNavLink>
         </MudNavMenu>
     </MudDrawer>
+    <MudMainContent Class="pt-16 pb-4 px-2"
+                    @key="Language.Current">
 
-    <MudMainContent Class="pt-16 pb-4 px-2" @key="Language.Current">
         @Body
     </MudMainContent>
 </MudLayout>

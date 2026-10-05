@@ -42,20 +42,16 @@
     margin-bottom: 26px;
 }
 
-.logo-circle {
-    width: 70px;
-    height: 70px;
-    margin: 0 auto 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: linear-gradient(145deg, #6552e6, #4d3bd1);
-    box-shadow: 0 10px 24px rgba(79, 62, 207, 0.24);
+.login-logo {
+    width: 150px;
+    height: 150px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto 8px;
 }
 
 .app-title {
-    margin: 0;
+    margin: 4px 0 0;
     color: #202124;
     font-size: 29px;
     line-height: 1.1;
@@ -230,12 +226,6 @@
         padding: 16px;
     }
 
-    .logo-circle {
-        width: 56px;
-        height: 56px;
-        margin-bottom: 8px;
-    }
-
     .app-title {
         font-size: 24px;
     }
@@ -285,5 +275,23 @@
 
     .num-btn {
         height: 60px;
+    }
+}
+
+.app-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.app-brand-logo {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+}
+@media (max-width: 600px) {
+    .login-logo {
+        width: 90px;
+        height: 90px;
     }
 }
