@@ -32,7 +32,7 @@ namespace NaryadAi.Components.Pages
 
             if (!role.Success ||
                 !userId.Success ||
-                role.Value is not ("Manager" or "Admin"))
+                role.Value != "Manager")
             {
                 Navigation.NavigateTo("/login", replace: true);
                 return;

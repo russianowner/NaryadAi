@@ -20,8 +20,13 @@
         <p class="app-subtitle">@GetText("CompanyName")</p>
     </div>
 
-    <div class="auth-tabs">
-        <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pt-4" Centered="true">
+    <div class="auth-card">
+        <MudTabs Elevation="0"
+                 Rounded="false"
+                 ApplyEffectsToContainer="false"
+                 PanelClass="auth-tab-panel"
+                 Centered="true"
+                 Class="auth-tabs">
             <MudTabPanel Text="@GetText("PinTab")">
                 <div class="pin-display">
                     <p class="pin-instruction">@GetText("EnterPin")</p>
@@ -33,30 +38,24 @@
                     </div>
                     <p class="error-text @(showError ? "visible" : "")">@GetText("ErrorPin")</p>
                 </div>
-
                 <div class="numpad">
-                    <div class="numpad-row">
-                        <button class="num-btn" @onclick='() => AddDigit("1")'>1</button>
-                        <button class="num-btn" @onclick='() => AddDigit("2")'>2</button>
-                        <button class="num-btn" @onclick='() => AddDigit("3")'>3</button>
-                    </div>
-                    <div class="numpad-row">
-                        <button class="num-btn" @onclick='() => AddDigit("4")'>4</button>
-                        <button class="num-btn" @onclick='() => AddDigit("5")'>5</button>
-                        <button class="num-btn" @onclick='() => AddDigit("6")'>6</button>
-                    </div>
-                    <div class="numpad-row">
-                        <button class="num-btn" @onclick='() => AddDigit("7")'>7</button>
-                        <button class="num-btn" @onclick='() => AddDigit("8")'>8</button>
-                        <button class="num-btn" @onclick='() => AddDigit("9")'>9</button>
-                    </div>
-                    <div class="numpad-row">
-                        <button class="num-btn empty"></button>
-                        <button class="num-btn" @onclick='() => AddDigit("0")'>0</button>
-                        <button class="num-btn delete-btn" @onclick="RemoveDigit">
-                            <MudIcon Icon="@Icons.Material.Filled.Backspace" />
-                        </button>
-                    </div>
+                    <button class="num-btn" @onclick='() => AddDigit("1")'>1</button>
+                    <button class="num-btn" @onclick='() => AddDigit("2")'>2</button>
+                    <button class="num-btn" @onclick='() => AddDigit("3")'>3</button>
+
+                    <button class="num-btn" @onclick='() => AddDigit("4")'>4</button>
+                    <button class="num-btn" @onclick='() => AddDigit("5")'>5</button>
+                    <button class="num-btn" @onclick='() => AddDigit("6")'>6</button>
+
+                    <button class="num-btn" @onclick='() => AddDigit("7")'>7</button>
+                    <button class="num-btn" @onclick='() => AddDigit("8")'>8</button>
+                    <button class="num-btn" @onclick='() => AddDigit("9")'>9</button>
+
+                    <button class="num-btn empty"></button>
+                    <button class="num-btn" @onclick='() => AddDigit("0")'>0</button>
+                    <button class="num-btn delete-btn" @onclick="RemoveDigit">
+                        <MudIcon Icon="@Icons.Material.Filled.Backspace" />
+                    </button>
                 </div>
             </MudTabPanel>
 

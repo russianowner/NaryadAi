@@ -59,16 +59,42 @@
                 <section class="profile-section">
                     <div class="section-heading">
                         <div>
-                            <MudText Typo="Typo.overline" Color="Color.Secondary">@Language.T("ВАШИ НАРЯДЫ")</MudText>
-                            <MudText Typo="Typo.h6">@Language.T("Сводка по созданным нарядам")</MudText>
+                            <MudText Typo="Typo.overline" Color="Color.Secondary">
+                                @Language.T("ВАШИ НАРЯДЫ")
+                            </MudText>
+                            <MudText Typo="Typo.h6">
+                                @Language.T("Сводка по созданным нарядам")
+                            </MudText>
                         </div>
-                        <MudIcon Icon="@Icons.Material.Filled.Assignment" Color="Color.Primary" Size="Size.Large" />
+                        <MudIcon Icon="@Icons.Material.Filled.Assignment"
+                                 Color="Color.Primary"
+                                 Size="Size.Large" />
                     </div>
                     <MudGrid Spacing="2">
-                        <MudItem xs="6" sm="3"><div class="profile-stat stat-blue"><span>@Language.T("Всего")</span><strong>@totalOrders</strong></div></MudItem>
-                        <MudItem xs="6" sm="3"><div class="profile-stat stat-amber"><span>@Language.T("Активные")</span><strong>@activeOrders</strong></div></MudItem>
-                        <MudItem xs="6" sm="3"><div class="profile-stat stat-green"><span>@Language.T("Исполнено")</span><strong>@completedOrders</strong></div></MudItem>
-                        <MudItem xs="6" sm="3"><div class="profile-stat stat-red"><span>@Language.T("Просрочено")</span><strong>@overdueOrders</strong></div></MudItem>
+                        <MudItem xs="6" sm="3">
+                            <div class="profile-stat stat-blue">
+                                <span>@Language.T("Всего")</span>
+                                <strong>@totalOrders</strong>
+                            </div>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <div class="profile-stat stat-amber">
+                                <span>@Language.T("Активные")</span>
+                                <strong>@activeOrders</strong>
+                            </div>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <div class="profile-stat stat-green">
+                                <span>@Language.T("Исполнено")</span>
+                                <strong>@completedOrders</strong>
+                            </div>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <div class="profile-stat stat-red">
+                                <span>@Language.T("Просрочено")</span>
+                                <strong>@overdueOrders</strong>
+                            </div>
+                        </MudItem>
                     </MudGrid>
                 </section>
             }
@@ -77,72 +103,244 @@
                 <section class="profile-section">
                     <div class="section-heading">
                         <div>
-                            <MudText Typo="Typo.overline" Color="Color.Secondary">@Language.T("МОЯ РАБОТА")</MudText>
-                            <MudText Typo="Typo.h6">@Language.T("Показатели по нарядам")</MudText>
+                            <MudText Typo="Typo.overline" Color="Color.Secondary">
+                                @Language.T("МОЯ РАБОТА")
+                            </MudText>
+                            <MudText Typo="Typo.h6">
+                                @Language.T("Показатели по нарядам")
+                            </MudText>
                         </div>
-                        <MudIcon Icon="@Icons.Material.Filled.Handyman" Color="Color.Primary" Size="Size.Large" />
+                        <MudIcon Icon="@Icons.Material.Filled.Handyman"
+                                 Color="Color.Primary"
+                                 Size="Size.Large" />
                     </div>
                     <MudGrid Spacing="2">
-                        <MudItem xs="6" sm="3"><div class="profile-stat stat-blue"><span>@Language.T("Назначено")</span><strong>@totalOrders</strong></div></MudItem>
-                        <MudItem xs="6" sm="3"><div class="profile-stat stat-amber"><span>@Language.T("Активные")</span><strong>@activeOrders</strong></div></MudItem>
-                        <MudItem xs="6" sm="3"><div class="profile-stat stat-green"><span>@Language.T("Исполнено")</span><strong>@completedOrders</strong></div></MudItem>
-                        <MudItem xs="6" sm="3"><div class="profile-stat stat-red"><span>@Language.T("На доработку")</span><strong>@reworkOrders</strong></div></MudItem>
+                        <MudItem xs="6" sm="3">
+                            <div class="profile-stat stat-blue">
+                                <span>@Language.T("Назначено")</span>
+                                <strong>@totalOrders</strong>
+                            </div>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <div class="profile-stat stat-amber">
+                                <span>@Language.T("Активные")</span>
+                                <strong>@activeOrders</strong>
+                            </div>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <div class="profile-stat stat-green">
+                                <span>@Language.T("Исполнено")</span>
+                                <strong>@completedOrders</strong>
+                            </div>
+                        </MudItem>
+                        <MudItem xs="6" sm="3">
+                            <div class="profile-stat stat-red">
+                                <span>@Language.T("На доработку")</span>
+                                <strong>@reworkOrders</strong>
+                            </div>
+                        </MudItem>
                     </MudGrid>
-                    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Class="mt-3">
-                        @Language.T("Оценки ИИ и мастера появятся после подключения модуля проверки нарядов.")
-                    </MudAlert>
+                    @if (rating is not null)
+                    {
+                        <div class="profile-rating mt-3">
+                            <MudIcon Icon="@Icons.Material.Filled.Star"
+                                     Color="Color.Warning"
+                                     Size="Size.Medium" />
+                            <div>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @Language.T("Рейтинг исполнителя")
+                                </MudText>
+                                <MudText Typo="Typo.h6">
+                                    @rating.Score.ToString("0.0") / 100
+                                </MudText>
+                            </div>
+                        </div>
+                    }
+                </section>
+            }
+            else if (employee.Role == "Manager")
+            {
+                <section class="profile-section">
+                    <div class="section-heading">
+                        <div>
+                            <MudText Typo="Typo.overline" Color="Color.Secondary">
+                                @Language.T("РАБОЧИЕ РАЗДЕЛЫ")
+                            </MudText>
+                            <MudText Typo="Typo.h6">
+                                @Language.T("Управление ТОиР")
+                            </MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.BusinessCenter"
+                                 Color="Color.Primary"
+                                 Size="Size.Large" />
+                    </div>
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12" sm="6">
+                            <MudButton Href="/dashboard"
+                                       Variant="Variant.Outlined"
+                                       Color="Color.Primary"
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Analytics"
+                                       Class="profile-action-button">
+                                @Language.T("Дашборд ТОиР")
+                            </MudButton>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudButton Href="/reports"
+                                       Variant="Variant.Outlined"
+                                       Color="Color.Primary"
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Assessment"
+                                       Class="profile-action-button">
+                                @Language.T("Отчёты")
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </section>
+            }
+            else if (employee.Role == "Admin")
+            {
+                <section class="profile-section">
+                    <div class="section-heading">
+                        <div>
+                            <MudText Typo="Typo.overline" Color="Color.Secondary">
+                                @Language.T("АДМИНИСТРИРОВАНИЕ")
+                            </MudText>
+                            <MudText Typo="Typo.h6">
+                                @Language.T("Управление системой")
+                            </MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings"
+                                 Color="Color.Primary"
+                                 Size="Size.Large" />
+                    </div>
+                    <MudGrid Spacing="2">
+                        <MudItem xs="12" sm="6">
+                            <MudButton Href="/admin/employees"
+                                       Variant="Variant.Outlined"
+                                       Color="Color.Primary"
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.People"
+                                       Class="profile-action-button">
+                                @Language.T("Персонал")
+                            </MudButton>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudButton Href="/admin/dictionaries"
+                                       Variant="Variant.Outlined"
+                                       Color="Color.Primary"
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Book"
+                                       Class="profile-action-button">
+                                @Language.T("Справочники")
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
                 </section>
             }
 
-            <section class="profile-section">
-                <div class="section-heading">
-                    <div>
-                        <MudText Typo="Typo.overline" Color="Color.Secondary">@Language.T("ИСТОРИЯ")</MudText>
-                        <MudText Typo="Typo.h6">@Language.T("Последние наряды")</MudText>
+            @if (employee.Role is "Master" or "Worker")
+            {
+                <section class="profile-section">
+                    <div class="section-heading">
+                        <div>
+                            <MudText Typo="Typo.overline" Color="Color.Secondary">
+                                @Language.T("ИСТОРИЯ")
+                            </MudText>
+                            <MudText Typo="Typo.h6">
+                                @Language.T("Все наряды")
+                            </MudText>
+                        </div>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @recentOrders.Count @Language.T("записей")
+                        </MudText>
                     </div>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@recentOrders.Count @Language.T("записей")</MudText>
-                </div>
+                    @if (recentOrders.Count == 0)
+                    {
+                        <div class="profile-empty">
+                            <MudIcon Icon="@Icons.Material.Filled.Inbox"
+                            Size="Size.Large"
+                            Color="Color.Secondary" />
 
-                @if (recentOrders.Count == 0)
-                {
-                    <div class="profile-empty">
-                        <MudIcon Icon="@Icons.Material.Filled.Inbox" Size="Size.Large" Color="Color.Secondary" />
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@Language.T("Наряды пока не назначались.")</MudText>
-                    </div>
-                }
-                else
-                {
-                    <MudStack Spacing="2">
-                        @foreach (var order in recentOrders)
-                        {
-                            <MudPaper @key="order.Id" Elevation="0" Class="recent-order pa-3">
-                                <div class="order-heading">
-                                    <MudText Typo="Typo.subtitle1" Class="order-number">@order.Number</MudText>
-                                    <MudChip T="string" Size="Size.Small" Color="OrderStatusColor(order.Status)" Variant="Variant.Outlined">
-                                        @Language.T(order.Status)
-                                    </MudChip>
-                                </div>
-                                <MudText Typo="Typo.body2" Class="order-equipment">
-                                    @(order.Equipment?.Name ?? Language.T("Оборудование")) · @order.Location
-                                </MudText>
-                                <MudText Typo="Typo.body2" Class="order-description">@order.Description</MudText>
-                                @if (order.AiEvaluations != null && order.AiEvaluations.Any())
-                                {
-                                    var eval = order.AiEvaluations.OrderByDescending(e => e.EvaluatedAt).First();
-                                    <MudText Typo="Typo.caption" Color="Color.Tertiary" Class="mt-1 d-block font-weight-bold">
-                                        <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Size="Size.Small" Class="mr-1 mb-n1" />
-                                        @Language.T("Оценка ИИ: ") @eval.Score.ToString("0")/100 (@Language.T(eval.Verdict))
+                            <MudText Typo="Typo.body2"
+                            Color="Color.Secondary">
+                                @Language.T("Наряды пока не назначались.")
+                            </MudText>
+                        </div>
+                    }
+                    else
+                    {
+                        <MudStack Spacing="2">
+                            @foreach (var order in PagedRecentOrders)
+                            {
+                                <MudPaper @key="order.Id"
+                                Elevation="0"
+                                Class="recent-order pa-3">
+                                    <div class="order-heading">
+                                        <MudText Typo="Typo.subtitle1"
+                                        Class="order-number">
+                                            @order.Number
+                                        </MudText>
+                                        <MudChip T="string"
+                                        Size="Size.Small"
+                                        Color="OrderStatusColor(order.Status)"
+                                        Variant="Variant.Outlined">
+                                            @Language.T(order.Status)
+                                        </MudChip>
+                                    </div>
+                                    <MudText Typo="Typo.body2"
+                                    Class="order-equipment">
+                                        @(order.Equipment?.Name ?? Language.T("Оборудование"))
+                                        · @order.Location
                                     </MudText>
-                                }
-                                <div class="order-footer">
-                                    <span>@Language.T(order.Type) · @Language.T(order.Priority)</span>
-                                    <span>@Language.T("Срок:"): @order.Deadline.ToLocalTime().ToString("dd.MM HH:mm")</span>
-                                </div>
-                            </MudPaper>
+                                    <MudText Typo="Typo.body2"
+                                    Class="order-description">
+                                        @order.Description
+                                    </MudText>
+                                    @if (order.AiEvaluations != null && order.AiEvaluations.Any())
+                                    {
+                                        var eval = order.AiEvaluations
+                                            .OrderByDescending(e => e.EvaluatedAt)
+                                            .First();
+                                        <MudText Typo="Typo.caption"
+                                        Color="Color.Tertiary"
+                                        Class="mt-1 d-block font-weight-bold">
+                                            <MudIcon Icon="@Icons.Material.Filled.AutoAwesome"
+                                            Size="Size.Small"
+                                            Class="mr-1 mb-n1" />
+                                            @Language.T("Оценка ИИ: ")
+                                            @eval.Score.ToString("0")/100
+                                            (@Language.T(eval.Verdict))
+                                        </MudText>
+                                    }
+                                    <div class="order-footer">
+                                        <span>
+                                            @Language.T(order.Type)
+                                            ·
+                                            @Language.T(order.Priority)
+                                        </span>
+                                        <span>
+                                            @Language.T("Срок:"):
+                                            @order.Deadline.ToLocalTime().ToString("dd.MM HH:mm")
+                                        </span>
+                                    </div>
+                                </MudPaper>
+                            }
+                        </MudStack>
+                        @if (HistoryPageCount > 1)
+                        {
+                            <div class="profile-pagination">
+                                <MudPagination @bind-Selected="historyPage"
+                                Count="@HistoryPageCount"
+                                BoundaryCount="1"
+                                SiblingCount="1"
+                                Color="Color.Primary"
+                                Size="Size.Small" />
+                            </div>
                         }
-                    </MudStack>
-                }
-            </section>
+                    }
+                </section>
+            }
         </MudStack>
     }
 </MudContainer>

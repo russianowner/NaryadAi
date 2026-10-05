@@ -23,6 +23,8 @@ namespace NaryadAi.Components.Pages.Master
         private bool isAuthorized = false;
         private int currentMasterId = 0;
         private int refreshPending;
+        private const int OrdersPerLanePage = 4;
+        private readonly Dictionary<string, int> lanePages = new();
 
         private bool isQrCameraOpen;
         private bool suppressNotifierRefresh;
@@ -159,6 +161,28 @@ namespace NaryadAi.Components.Pages.Master
             }
 
             recommendedWorkerId = null;
+        }
+
+        private int GetLanePageCount(int totalItems)
+        {
+            return Math.Max(
+                1,
+                (int)Math.Ceiling(totalItems / (double)OrdersPerLanePage)
+            );
+        }
+
+        private int GetLanePage(string laneKey, int totalItems)
+        {
+            var pageCount = GetLanePageCount(totalItems);
+
+            var currentPage = lanePages.GetValueOrDefault(laneKey, 1);
+
+            return Math.Clamp(currentPage, 1, pageCount);
+        }
+
+        private void SetLanePage(string laneKey, int page)
+        {
+            lanePages[laneKey] = Math.Max(1, page);
         }
 
         private void OnWorkOrderChanged(WorkOrderUpdate update)

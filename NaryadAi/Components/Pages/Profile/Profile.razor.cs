@@ -20,6 +20,15 @@ public partial class Profile : ComponentBase, IDisposable
     private List<WorkOrder> recentOrders = new();
     private bool isLoaded;
     private string? errorMessage;
+    private const int HistoryPageSize = 10;
+    private int historyPage = 1;
+    private int HistoryPageCount =>
+    Math.Max(1, (int)Math.Ceiling(
+        recentOrders.Count / (double)HistoryPageSize));
+    private IEnumerable<WorkOrder> PagedRecentOrders =>
+    recentOrders
+        .Skip((historyPage - 1) * HistoryPageSize)
+        .Take(HistoryPageSize);
     private int totalOrders;
     private int activeOrders;
     private int completedOrders;
@@ -85,26 +94,44 @@ public partial class Profile : ComponentBase, IDisposable
 
     private async Task LoadOrdersAsync(Employee currentEmployee)
     {
+        if (currentEmployee.Role is not ("Master" or "Worker"))
+        {
+            recentOrders = new();
+            totalOrders = 0;
+            activeOrders = 0;
+            completedOrders = 0;
+            overdueOrders = 0;
+            reworkOrders = 0;
+            rating = null;
+            return;
+        }
         var query = DbContext.WorkOrders.AsNoTracking();
-        query = currentEmployee.Role == "Master"
-            ? query.Where(order => order.MasterId == currentEmployee.Id)
-            : query.Where(order => order.ExecutorId == currentEmployee.Id);
-
+        if (currentEmployee.Role == "Master")
+        {
+            query = query.Where(order => order.MasterId == currentEmployee.Id);
+        }
+        else if (currentEmployee.Role == "Worker")
+        {
+            query = query.Where(order => order.ExecutorId == currentEmployee.Id);
+        }
         var orders = await query
             .Include(order => order.Equipment)
-            .Include(order => order.AiEvaluations) 
+            .Include(order => order.AiEvaluations)
             .OrderByDescending(order => order.CreatedAt)
             .ToListAsync();
-
         totalOrders = orders.Count;
         activeOrders = orders.Count(order => IsActive(order.Status));
-        completedOrders = orders.Count(order => order.Status is WorkOrderStates.Completed or WorkOrderStates.Closed);
-        reworkOrders = orders.Count(order => order.Status == "На доработку");
+        completedOrders = orders.Count(order =>
+            order.Status is WorkOrderStates.Completed or WorkOrderStates.Closed);
+        reworkOrders = orders.Count(order =>
+            order.Status == "На доработку");
         overdueOrders = orders.Count(order =>
             order.Deadline < DateTime.UtcNow &&
-            order.Status is not (WorkOrderStates.Completed or WorkOrderStates.Closed or WorkOrderStates.Rejected));
-        recentOrders = orders.ToList();
-
+            order.Status is not (
+                WorkOrderStates.Completed or
+                WorkOrderStates.Closed or
+                WorkOrderStates.Rejected));
+        recentOrders = orders;
         if (currentEmployee.Role == "Worker")
         {
             rating = await RatingService.CalculateAsync(currentEmployee.Id);

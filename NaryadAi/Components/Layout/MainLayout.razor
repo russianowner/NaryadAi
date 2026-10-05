@@ -38,15 +38,43 @@
                 <MudNavLink Href="/admin/employees" Icon="@Icons.Material.Filled.People">@Language.T("Персонал")</MudNavLink>
                 <MudNavLink Href="/admin/dictionaries" Icon="@Icons.Material.Filled.Book">@Language.T("Справочники")</MudNavLink>
             }
-            @if (userRole is "Manager" or "Admin" or "Master")
+            @if (userRole is "Manager")
             {
-                <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Analytics">@Language.T("Дашборд ТОиР")</MudNavLink>
-                <MudNavLink Href="/reports" Icon="@Icons.Material.Filled.Assessment">@Language.T("Отчёты")</MudNavLink>
+                <MudNavLink Href="/dashboard"
+                            Icon="@Icons.Material.Filled.Analytics">
+                    @Language.T("Дашборд ТОиР")
+                </MudNavLink>
+                <MudNavLink Href="/reports"
+                            Icon="@Icons.Material.Filled.Assessment">
+                    @Language.T("Отчёты")
+                </MudNavLink>
             }
-            @if (userRole is "Master" or "Admin")
+
+            @if (userRole is "Master")
             {
-                <MudNavLink Href="/master" Icon="@Icons.Material.Filled.Dashboard">@Language.T("Панель мастера")</MudNavLink>
-                <MudNavLink Href="/ai-assistant" Icon="@Icons.Material.Filled.SmartToy">@Language.T("ИИ-Ассистент")</MudNavLink>
+                <MudNavLink Href="/master"
+                            Icon="@Icons.Material.Filled.Dashboard">
+                    @Language.T("Панель мастера")
+                </MudNavLink>
+                <MudNavLink Href="/reports"
+                            Icon="@Icons.Material.Filled.Assessment">
+                    @Language.T("Отчёты")
+                </MudNavLink>
+                <MudNavLink Href="/ai-assistant"
+                            Icon="@Icons.Material.Filled.SmartToy">
+                    @Language.T("ИИ-Ассистент")
+                </MudNavLink>
+            }
+            @if (userRole is "Admin")
+            {
+                <MudNavLink Href="/admin/employees"
+                            Icon="@Icons.Material.Filled.People">
+                    @Language.T("Персонал")
+                </MudNavLink>
+                <MudNavLink Href="/admin/dictionaries"
+                            Icon="@Icons.Material.Filled.Book">
+                    @Language.T("Справочники")
+                </MudNavLink>
             }
             @if (userRole is "Worker")
             {

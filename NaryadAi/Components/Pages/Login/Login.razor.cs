@@ -89,23 +89,31 @@ namespace NaryadAi.Components.Pages.Login
         {
             var employee = await DbContext.Employees
                 .FirstOrDefaultAsync(e => e.PinCode == enteredPin);
-
             if (employee != null)
             {
                 await BrowserStorage.SetAsync("UserId", employee.Id);
                 await BrowserStorage.SetAsync("UserRole", employee.Role);
                 await BrowserStorage.SetAsync("UserName", employee.FullName);
-
                 if (employee.Role == "Master")
-                    Navigation.NavigateTo("/");
+                {
+                    Navigation.NavigateTo("/master");
+                }
                 else if (employee.Role == "Worker")
+                {
                     Navigation.NavigateTo("/worker");
+                }
+                else if (employee.Role == "Manager")
+                {
+                    Navigation.NavigateTo("/dashboard");
+                }
+                else if (employee.Role == "Admin")
+                {
+                    Navigation.NavigateTo("/admin/employees");
+                }
+                return;
             }
-            else
-            {
-                showError = true;
-                enteredPin = "";
-            }
+            showError = true;
+            enteredPin = "";
         }
 
         private async Task ValidateLogin()

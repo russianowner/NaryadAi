@@ -11,8 +11,12 @@
 }
 else
 {
-    <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4 pb-8">
-        <MudText Typo="Typo.h5" Class="mb-6 font-weight-bold" Color="Color.Primary">@Language.T("Выдача нового наряда")</MudText>
+    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="master-page mt-4 pb-8">
+        <MudText Typo="Typo.h5"
+                 Class="mb-6 font-weight-bold"
+                 Color="Color.Primary">
+            @Language.T("Выдача нового наряда")
+        </MudText>
 
         <MudCard Elevation="3" Class="rounded-lg pa-4">
             <div class="d-flex gap-4 mb-4">
@@ -185,23 +189,68 @@ else
             <div class="board-columns">
                 @foreach (var lane in boardLanes)
                 {
-                    var laneOrders = FilteredOrders.Where(x => lane.Statuses.Contains(x.Status)).ToList();
+                    var laneKey = string.Join("|", lane.Statuses);
+                    var laneOrders = FilteredOrders
+                        .Where(x => lane.Statuses.Contains(x.Status))
+                        .ToList();
+
+                    var lanePageCount = GetLanePageCount(laneOrders.Count);
+                    var lanePage = GetLanePage(laneKey, laneOrders.Count);
+
+                    var lanePageOrders = laneOrders
+                        .Skip((lanePage - 1) * OrdersPerLanePage)
+                        .Take(OrdersPerLanePage)
+                        .ToList();
+
                     <section class="board-lane">
-                        <header><strong>@Language.T(lane.Title)</strong><span>@laneOrders.Count</span></header>
-                        @foreach (var order in laneOrders)
+
+                        <header>
+                            <div class="board-lane-title">
+                                <strong>@Language.T(lane.Title)</strong>
+                            </div>
+
+                            <span>@laneOrders.Count</span>
+                        </header>
+
+                        @foreach (var order in lanePageOrders)
                         {
                             <article class="board-order">
+
                                 <div class="board-order-top">
                                     <strong>@order.Number</strong>
-                                    <span class="board-status" style="--status-color:@StatusColor(order.Status)">@Language.T(order.Status)</span>
+
+                                    <span class="board-status"
+                                          style="--status-color:@StatusColor(order.Status)">
+                                        @Language.T(order.Status)
+                                    </span>
                                 </div>
-                                <div class="board-order-equipment">@(order.Equipment?.Name ?? Language.T("Оборудование")) · @order.Location</div>
-                                <div class="board-order-description">@order.Description</div>
-                                <div class="board-order-meta">@Language.T("Исполнитель:"): @(order.Executor?.FullName ?? Language.T("не назначен"))</div>
-                                <div class="board-order-meta">@Language.T("Срок:"): @order.Deadline.ToLocalTime().ToString("dd.MM HH:mm")</div>
+
+                                <div class="board-order-equipment">
+                                    @(order.Equipment?.Name ?? Language.T("Оборудование")) · @order.Location
+                                </div>
+
+                                <div class="board-order-description">
+                                    @order.Description
+                                </div>
+
+                                <div class="board-order-meta">
+                                    @Language.T("Исполнитель:"):
+                                    @(order.Executor?.FullName ?? Language.T("не назначен"))
+                                </div>
+
+                                <div class="board-order-meta">
+                                    @Language.T("Срок:"):
+                                    @order.Deadline.ToLocalTime().ToString("dd.MM HH\\:mm")
+                                </div>
+
                                 <div class="order-actions-grid">
 
-                                    @if (order.Status is "Выдан" or "Принят в работу" or "В очереди" or "Приостановлен" or "На доработку" or "Отклонён")
+                                    @if (order.Status is "Выдан"
+                                        or "Принят в работу"
+                                        or "В очереди"
+                                        or "Приостановлен"
+                                        or "На доработку"
+                                        or "Отклонён")
                                     {
                                         <div class="order-action-card">
                                             <div class="order-action-header">
@@ -209,14 +258,19 @@ else
                                                     <MudIcon Icon="@Icons.Material.Filled.Group"
                                                              Size="Size.Small" />
                                                 </div>
+
                                                 <div class="order-action-title">
-                                                    <strong>@Language.T("Сменить исполнителя")</strong>
+                                                    <strong>
+                                                        @Language.T("Сменить исполнителя")
+                                                    </strong>
+
                                                     <span>
                                                         @Language.T("Текущий исполнитель"):
                                                         @(order.Executor?.FullName ?? Language.T("не назначен"))
                                                     </span>
                                                 </div>
                                             </div>
+
                                             <MudSelect T="int?"
                                                        Value="@GetReassignTarget(order.Id)"
                                                        ValueChanged="@(v => reassignTargets[order.Id] = v)"
@@ -224,12 +278,14 @@ else
                                                        Variant="Variant.Outlined"
                                                        Margin="Margin.Dense"
                                                        FullWidth="true">
+
                                                 @foreach (var w in workers.Where(w => w.Id != order.ExecutorId))
                                                 {
                                                     <MudSelectItem T="int?" Value="@w.Id">
                                                         <div class="d-flex align-center gap-2">
                                                             <span class="worker-status-dot @WorkerStatusClass(w.Status)"></span>
                                                             <span>@w.FullName</span>
+
                                                             <span class="order-select-status">
                                                                 @Language.T(w.Status)
                                                             </span>
@@ -237,6 +293,7 @@ else
                                                     </MudSelectItem>
                                                 }
                                             </MudSelect>
+
                                             <MudButton Variant="Variant.Filled"
                                                        Color="Color.Primary"
                                                        FullWidth="true"
@@ -244,13 +301,16 @@ else
                                                        Class="order-action-button"
                                                        Disabled="@(GetReassignTarget(order.Id) is null)"
                                                        OnClick="@(() => ReassignOrder(order))">
+
                                                 <MudIcon Icon="@Icons.Material.Filled.PersonAdd"
                                                          Size="Size.Small"
                                                          Class="mr-2" />
+
                                                 @Language.T("ПЕРЕНАЗНАЧИТЬ")
                                             </MudButton>
                                         </div>
                                     }
+
                                     @if (order.Status is not ("Закрыт" or "Проверка ИИ" or "Отклонён"))
                                     {
                                         <div class="order-action-card">
@@ -260,7 +320,9 @@ else
                                                              Size="Size.Small" />
                                                 </div>
                                                 <div class="order-action-title">
-                                                    <strong>@Language.T("Изменить приоритет")</strong>
+                                                    <strong>
+                                                        @Language.T("Изменить приоритет")
+                                                    </strong>
                                                     <span>
                                                         @Language.T("Текущий приоритет"):
                                                         @Language.T(order.Priority)
@@ -299,14 +361,34 @@ else
                                 </div>
                                 @if (order.Status is "Проверка ИИ" or "На доработку")
                                 {
-                                    var evaluation = order.AiEvaluations.OrderByDescending(x => x.EvaluatedAt).FirstOrDefault();
+                                    var evaluation = order.AiEvaluations
+                                        .OrderByDescending(x => x.EvaluatedAt)
+                                        .FirstOrDefault();
                                     <div class="ai-review-box">
-                                        <strong>@Language.T("ИИ:"): @(Language.T(evaluation?.Verdict ?? "проверка")) · @(evaluation?.Score.ToString("0") ?? "—")/100</strong>
-                                        <span>@(evaluation?.Explanation ?? Language.T("Оценка готовится"))</span>
-                                        <MudButton Variant="Variant.Filled" Color="Color.Success" FullWidth="true" Class="master-action-btn mt-2" OnClick="@(() => ApproveOrder(order))">@Language.T("ПРИНЯТЬ И ЗАКРЫТЬ")</MudButton>
+                                        <strong>
+                                            @Language.T("ИИ:"):
+                                            @(Language.T(evaluation?.Verdict ?? "проверка"))
+                                            · @(evaluation?.Score.ToString("0") ?? "—")/100
+                                        </strong>
+                                        <span>
+                                            @(evaluation?.Explanation ?? Language.T("Оценка готовится"))
+                                        </span>
+                                        <MudButton Variant="Variant.Filled"
+                                                   Color="Color.Success"
+                                                   FullWidth="true"
+                                                   Class="master-action-btn mt-2"
+                                                   OnClick="@(() => ApproveOrder(order))">
+                                            @Language.T("ПРИНЯТЬ И ЗАКРЫТЬ")
+                                        </MudButton>
                                         @if (order.Status == "Проверка ИИ")
                                         {
-                                            <MudButton Variant="Variant.Outlined" Color="Color.Warning" FullWidth="true" Class="master-action-btn mt-2" OnClick="@(() => ReturnForRework(order))">@Language.T("ВЕРНУТЬ НА ДОРАБОТКУ")</MudButton>
+                                            <MudButton Variant="Variant.Outlined"
+                                                       Color="Color.Warning"
+                                                       FullWidth="true"
+                                                       Class="master-action-btn mt-2"
+                                                       OnClick="@(() => ReturnForRework(order))">
+                                                @Language.T("ВЕРНУТЬ НА ДОРАБОТКУ")
+                                            </MudButton>
                                         }
                                     </div>
                                 }
@@ -314,7 +396,25 @@ else
                         }
                         @if (laneOrders.Count == 0)
                         {
-                            <div class="board-empty">@Language.T("Нарядов нет")</div>
+                            <div class="board-empty">
+                                @Language.T("Нарядов нет")
+                            </div>
+                        }
+                        else if (lanePageCount > 1)
+                        {
+                            <div class="lane-pagination">
+                                <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+                                               Size="Size.Small"
+                                               Disabled="@(lanePage <= 1)"
+                                               OnClick="@(() => SetLanePage(laneKey, lanePage - 1))" />
+                                <span class="lane-page-info">
+                                    @lanePage / @lanePageCount
+                                </span>
+                                <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
+                                               Size="Size.Small"
+                                               Disabled="@(lanePage >= lanePageCount)"
+                                               OnClick="@(() => SetLanePage(laneKey, lanePage + 1))" />
+                            </div>
                         }
                     </section>
                 }
