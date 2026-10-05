@@ -24,9 +24,7 @@ public class AiChatbotService(IHttpClientFactory httpClientFactory, IConfigurati
         var workers = await db.Employees.Where(e => e.Role == "Worker").ToListAsync(cancellationToken);
         var activeOrders = await db.WorkOrders.Include(o => o.Equipment).Where(o => o.Status != "Закрыт" && o.Status != "Отклонён").ToListAsync(cancellationToken);
         var recentOrders = await db.WorkOrders.Include(o => o.Equipment).OrderByDescending(o => o.CreatedAt).Take(100).ToListAsync(cancellationToken);
-
-        // Безопасное обезличивание персональных данных (ФИО) перед отправкой во внешний API (согласно разделу 9 ТЗ)
-        var pseudonymMap = new Dictionary<string, string>(); // "Исполнитель #101" -> "Иванов И.И."
+        var pseudonymMap = new Dictionary<string, string>(); 
         var contextBuilder = new StringBuilder();
 
         contextBuilder.AppendLine("Текущие исполнители смены (обезличено для безопасности):");
@@ -83,12 +81,9 @@ public class AiChatbotService(IHttpClientFactory httpClientFactory, IConfigurati
             var err = await response.Content.ReadAsStringAsync(cancellationToken);
             return "Ошибка связи с ИИ: " + response.StatusCode + " - " + err;
         }
-
         var jsonResponse = await response.Content.ReadAsStringAsync(cancellationToken);
         using var document = JsonDocument.Parse(jsonResponse);
         var answer = document.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString() ?? "Нет ответа";
-
-        // Деобезличивание: заменяем псевдонимы 'Сотрудник_X' на реальные имена для мастера
         foreach (var kvp in pseudonymMap)
         {
             answer = answer.Replace(kvp.Key, kvp.Value);

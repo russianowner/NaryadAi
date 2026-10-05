@@ -1,0 +1,109 @@
+﻿@using Microsoft.EntityFrameworkCore
+@using NaryadAi.Data
+@using NaryadAi.Models
+@using MudBlazor
+
+<MudGrid Class="mb-6">
+
+    <MudItem xs="12" md="6">
+        <MudTextField @bind-Value="newEquipment.Name"
+                      Label="Название оборудования"
+                      Variant="Variant.Outlined"
+                      Class="mb-4" />
+        <MudTextField @bind-Value="newEquipment.InventoryNumber"
+                      Label="Инвентарный номер"
+                      Variant="Variant.Outlined"
+                      Class="mb-4" />
+        <MudTextField @bind-Value="newEquipment.Type"
+                      Label="Тип оборудования"
+                      Variant="Variant.Outlined"
+                      Class="mb-4" />
+    </MudItem>
+    <MudItem xs="12" md="6">
+        <MudSelect T="int?"
+                   @bind-Value="selectedSiteId"
+                   Label="Участок"
+                   Variant="Variant.Outlined"
+                   Class="mb-4">
+            @foreach (var site in sites)
+            {
+                <MudSelectItem T="int?" Value="@site.Id">
+                    @site.Name
+                </MudSelectItem>
+            }
+        </MudSelect>
+        <MudSelect T="string"
+                   @bind-Value="newEquipment.Criticality"
+                   Label="Критичность"
+                   Variant="Variant.Outlined"
+                   Class="mb-4">
+            <MudSelectItem Value="@("Высокая")">
+                Высокая
+            </MudSelectItem>
+            <MudSelectItem Value="@("Средняя")">
+                Средняя
+            </MudSelectItem>
+            <MudSelectItem Value="@("Низкая")">
+                Низкая
+            </MudSelectItem>
+        </MudSelect>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Size="Size.Large"
+                   FullWidth="true"
+                   OnClick="AddEquipment">
+            ДОБАВИТЬ ОБОРУДОВАНИЕ
+        </MudButton>
+    </MudItem>
+</MudGrid>
+
+<MudTable Items="equipment"
+          Hover="true"
+          Elevation="0"
+          Outlined="true"
+          Class="rounded-lg"
+          RowsPerPage="10"
+          RowsPerPageOptions="new int[] { 10, 25, 50 }">
+    <HeaderContent>
+        <MudTh>Название</MudTh>
+        <MudTh>Инв. номер</MudTh>
+        <MudTh>Участок</MudTh>
+        <MudTh>Тип</MudTh>
+        <MudTh>Критичность</MudTh>
+        <MudTh Style="width:70px;text-align:center;">
+        </MudTh>
+    </HeaderContent>
+
+    <RowTemplate>
+        <MudTd DataLabel="Название">
+            <b>@context.Name</b>
+        </MudTd>
+        <MudTd DataLabel="Инв. номер">
+            @context.InventoryNumber
+        </MudTd>
+        <MudTd DataLabel="Участок">
+            @context.Site?.Name
+        </MudTd>
+        <MudTd DataLabel="Тип">
+            @context.Type
+        </MudTd>
+        <MudTd DataLabel="Критичность">
+            @context.Criticality
+        </MudTd>
+        <MudTd Style="text-align:center;">
+            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                           Color="Color.Error"
+                           Size="Size.Small"
+                           OnClick="@(() => DeleteEquipment(context))" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Typo="Typo.body2" Class="pa-4">
+            Оборудование не добавлено
+        </MudText>
+    </NoRecordsContent>
+    <PagerContent>
+        <MudTablePager RowsPerPageString="Строк на странице"
+                       PageSizeOptions="new int[] { 10, 25, 50 }" />
+    </PagerContent>
+</MudTable>

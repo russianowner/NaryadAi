@@ -31,26 +31,82 @@ else
 
             <div class="d-flex align-start gap-2 mb-4">
                 <MudTextField @bind-Value="newOrder.Description" Label="@Language.T("Описание проблемы")" Lines="3" Variant="Variant.Outlined" Class="flex-grow-1" />
-                <MudIconButton Icon="@Icons.Material.Filled.Mic" Color="Color.Primary" Variant="Variant.Filled" OnClick="StartVoiceInput" title="@Language.T("Голосовой ввод")" Class="mt-2" />
+                <div class="d-flex flex-column gap-2 mt-2">
+                    <MudIconButton Icon="@Icons.Material.Filled.Mic" Color="Color.Primary" Variant="Variant.Filled" OnClick="StartVoiceInput" title="@Language.T("Голосовой ввод")" />    
+                    <MudFileUpload T="IBrowserFile" Accept=".png, .jpg, .jpeg" OnFilesChanged="UploadPhotoBefore">
+                        <ActivatorContent>
+                            <MudIconButton Icon="@Icons.Material.Filled.CameraAlt" Color="@(photoBefore != null ? Color.Success : Color.Secondary)" Variant="Variant.Filled" title="@Language.T("Фото до начала работ")" />
+                        </ActivatorContent>
+                    </MudFileUpload>
+                </div>
             </div>
-
-            <!-- Выбор оборудования тянется из базы -->
             <div class="d-flex align-start gap-2 mb-4">
-                <MudSelect T="int" @bind-Value="newOrder.EquipmentId" Label="@Language.T("Оборудование")" Variant="Variant.Outlined" Class="flex-grow-1" AnchorOrigin="Origin.BottomCenter">
-                    @foreach (var eq in equipmentList)
-                    {
-                        <MudSelectItem Value="@eq.Id">@eq.Name (@eq.Location)</MudSelectItem>
-                    }
-                </MudSelect>
-                <MudIconButton Icon="@Icons.Material.Filled.QrCodeScanner" Color="Color.Secondary" Variant="Variant.Filled" OnClick="ScanQrCode" title="@Language.T("Сканировать QR")" Class="mt-2" />
+                <div class="flex-grow-1">
+                    <MudSelect T="int?"
+                               Value="@selectedSiteId"
+                               ValueChanged="OnSiteSelected"
+                               Label="@Language.T("Участок")"
+                               Variant="Variant.Outlined"
+                               Class="mb-3">
+                        <MudSelectItem T="int?" Value="@((int?)null)">
+                            @Language.T("Выберите участок")
+                        </MudSelectItem>
+                        @foreach (var site in siteList)
+                        {
+                            <MudSelectItem T="int?" Value="@site.Id">
+                                @site.Name
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudSelect T="int?"
+                               Value="@selectedEquipmentId"
+                               ValueChanged="OnEquipmentSelected"
+                               Label="@Language.T("Оборудование")"
+                               Variant="Variant.Outlined"
+                               Disabled="@(!selectedSiteId.HasValue)"
+                               HelperText="@(
+                               !selectedSiteId.HasValue
+                                   ? Language.T("Сначала выберите участок")
+                                   : filteredEquipmentList.Count == 0
+                                       ? Language.T("На участке нет оборудования")
+                                       : null)">
+                        <MudSelectItem T="int?" Value="@((int?)null)">
+                            @Language.T("Выберите оборудование")
+                        </MudSelectItem>
+                        @foreach (var eq in filteredEquipmentList)
+                        {
+                            <MudSelectItem T="int?" Value="@eq.Id">
+                                @eq.Name
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+                </div>
+                <MudIconButton Icon="@Icons.Material.Filled.QrCodeScanner"
+                               Color="Color.Secondary"
+                               Variant="Variant.Filled"
+                               OnClick="ScanQrCode"
+                               title="@Language.T("Сканировать QR")"
+                               Class="mt-2" />
             </div>
-
-            <!-- Выбор только Слесарей из базы -->
             <MudSelect T="int?" @bind-Value="newOrder.ExecutorId" Label="@Language.T("Назначить исполнителя")" Variant="Variant.Outlined" Class="mb-4" AnchorOrigin="Origin.BottomCenter">
                 @foreach (var w in workers)
                 {
                     <MudSelectItem T="int?" Value="@w.Id">
-                        <span class="worker-option"><span class="worker-status-dot @WorkerStatusClass(w.Status)"></span>@w.FullName (@Language.T(w.Specialty)) — @Language.T(w.Status)</span>
+                        <span class="worker-option">
+                            <span class="worker-status-dot @WorkerStatusClass(w.Status)"></span>
+                            @w.FullName (@Language.T(w.Specialty)) — @Language.T(w.Status)
+                            @if (recommendedWorkerId == w.Id)
+                            {
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Color="Color.Warning"
+                                         Variant="Variant.Text"
+                                         Icon="@Icons.Material.Filled.AutoAwesome"
+                                         Class="ml-2">
+                                    @Language.T("ИИ Рекомендует")
+                                </MudChip>
+                            }
+                        </span>
                     </MudSelectItem>
                 }
             </MudSelect>
@@ -64,18 +120,66 @@ else
         </MudCard>
 
         <section class="orders-board mt-6">
-            <div class="board-heading">
-                <div>
-                    <MudText Typo="Typo.h5" Class="font-weight-bold">@Language.T("Наряды")</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@Language.T("Обновите список кнопкой фильтра или перезагрузкой страницы")</MudText>
+            <MudGrid Class="mb-4">
+                <MudItem xs="6" sm="3"><MudPaper Class="pa-3 text-center border-left-primary"><div><MudText Typo="Typo.caption" Color="Color.Secondary">@Language.T("Выдано за смену")</MudText></div><MudText Typo="Typo.h5" Class="font-weight-bold">@MasterIssued</MudText></MudPaper></MudItem>
+                <MudItem xs="6" sm="3"><MudPaper Class="pa-3 text-center border-left-success"><div><MudText Typo="Typo.caption" Color="Color.Secondary">@Language.T("Исполнено")</MudText></div><MudText Typo="Typo.h5" Class="font-weight-bold">@MasterCompleted</MudText></MudPaper></MudItem>
+                <MudItem xs="6" sm="3"><MudPaper Class="pa-3 text-center border-left-error"><div><MudText Typo="Typo.caption" Color="Color.Secondary">@Language.T("Просрочено")</MudText></div><MudText Typo="Typo.h5" Class="font-weight-bold text-error">@MasterOverdue</MudText></MudPaper></MudItem>
+                <MudItem xs="6" sm="3"><MudPaper Class="pa-3 text-center border-left-warning"><div><MudText Typo="Typo.caption" Color="Color.Secondary">@Language.T("В простое (шт)")</MudText></div><MudText Typo="Typo.h5" Class="font-weight-bold text-warning">@MasterIdle</MudText></MudPaper></MudItem>
+            </MudGrid>
+            <div class="board-heading mb-4">
+                <div class="board-heading-title">
+                    <MudText Typo="Typo.h5" Class="font-weight-bold">
+                        @Language.T("Канбан смены")
+                    </MudText>
                 </div>
-                <MudSelect T="string" @bind-Value="selectedStatus" Label="@Language.T("Фильтр по статусу")" Variant="Variant.Outlined" Class="board-filter">
-                    <MudSelectItem Value="@("Все")">@Language.T("Все статусы")</MudSelectItem>
-                    @foreach (var status in boardStatuses)
-                    {
-                        <MudSelectItem Value="@status">@Language.T(status)</MudSelectItem>
-                    }
-                </MudSelect>
+                <div class="board-filters-scroll">
+                    <div class="board-filters">
+                        <MudSelect T="string"
+                                   @bind-Value="selectedStatus"
+                                   Label="@Language.T("Статус")"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Class="board-filter board-filter-status">
+                            <MudSelectItem Value="@("Все")">
+                                @Language.T("Все статусы")
+                            </MudSelectItem>
+                            @foreach (var status in boardStatuses)
+                            {
+                                <MudSelectItem Value="@status">
+                                    @Language.T(status)
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudSelect T="int?"
+                                   @bind-Value="filterExecutor"
+                                   Label="@Language.T("Исполнитель")"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Clearable="true"
+                                   Class="board-filter board-filter-executor">
+                            @foreach (var w in workers)
+                            {
+                                <MudSelectItem T="int?" Value="@w.Id">
+                                    @w.FullName
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudSelect T="string"
+                                   @bind-Value="filterPriority"
+                                   Label="@Language.T("Приоритет")"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Clearable="true"
+                                   Class="board-filter board-filter-priority">
+                            @foreach (var p in priorities)
+                            {
+                                <MudSelectItem T="string" Value="@p">
+                                    @Language.T(p)
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
+                    </div>
+                </div>
             </div>
 
             <div class="board-columns">
@@ -95,35 +199,104 @@ else
                                 <div class="board-order-description">@order.Description</div>
                                 <div class="board-order-meta">@Language.T("Исполнитель:"): @(order.Executor?.FullName ?? Language.T("не назначен"))</div>
                                 <div class="board-order-meta">@Language.T("Срок:"): @order.Deadline.ToLocalTime().ToString("dd.MM HH:mm")</div>
-                                @if (order.Status is "Выдан" or "Принят в работу" or "В очереди" or "Приостановлен" or "На доработку" or "Отклонён")
-                                {
-                                    <div class="order-manage-box">
-                                        <MudSelect T="int?" Value="@GetReassignTarget(order.Id)" ValueChanged="@(v => reassignTargets[order.Id] = v)"
-                                                   Label="@Language.T("Другой исполнитель")" Variant="Variant.Outlined" Dense="false" Class="mt-2">
-                                            @foreach (var w in workers.Where(w => w.Id != order.ExecutorId))
-                                            {
-                                                <MudSelectItem T="int?" Value="@w.Id">@w.FullName — @Language.T(w.Status)</MudSelectItem>
-                                            }
-                                        </MudSelect>
-                                        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="master-action-btn mt-2"
-                                                   OnClick="@(() => ReassignOrder(order))">@Language.T("ПЕРЕНАЗНАЧИТЬ")</MudButton>
-                                    </div>
-                                }
-                                @if (order.Status is not ("Закрыт" or "Проверка ИИ" or "Отклонён"))
-                                {
-                                    <div class="order-manage-box">
-                                        <MudSelect T="string" Value="@(priorityTargets.GetValueOrDefault(order.Id) ?? order.Priority)"
-                                                   ValueChanged="@(v => priorityTargets[order.Id] = v)"
-                                                   Label="@Language.T("Приоритет")" Variant="Variant.Outlined" Class="mt-2">
-                                            @foreach (var p in priorities)
-                                            {
-                                                <MudSelectItem Value="@p">@Language.T(p)</MudSelectItem>
-                                            }
-                                        </MudSelect>
-                                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" Class="master-action-btn mt-2"
-                                                   OnClick="@(() => ChangePriority(order))">@Language.T("СМЕНИТЬ ПРИОРИТЕТ")</MudButton>
-                                    </div>
-                                }
+                                <div class="order-actions-grid">
+
+                                    @if (order.Status is "Выдан" or "Принят в работу" or "В очереди" or "Приостановлен" or "На доработку" or "Отклонён")
+                                    {
+                                        <div class="order-action-card">
+                                            <div class="order-action-header">
+                                                <div class="order-action-icon">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Group"
+                                                             Size="Size.Small" />
+                                                </div>
+                                                <div class="order-action-title">
+                                                    <strong>@Language.T("Сменить исполнителя")</strong>
+                                                    <span>
+                                                        @Language.T("Текущий исполнитель"):
+                                                        @(order.Executor?.FullName ?? Language.T("не назначен"))
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <MudSelect T="int?"
+                                                       Value="@GetReassignTarget(order.Id)"
+                                                       ValueChanged="@(v => reassignTargets[order.Id] = v)"
+                                                       Label="@Language.T("Новый исполнитель")"
+                                                       Variant="Variant.Outlined"
+                                                       Margin="Margin.Dense"
+                                                       FullWidth="true">
+                                                @foreach (var w in workers.Where(w => w.Id != order.ExecutorId))
+                                                {
+                                                    <MudSelectItem T="int?" Value="@w.Id">
+                                                        <div class="d-flex align-center gap-2">
+                                                            <span class="worker-status-dot @WorkerStatusClass(w.Status)"></span>
+                                                            <span>@w.FullName</span>
+                                                            <span class="order-select-status">
+                                                                @Language.T(w.Status)
+                                                            </span>
+                                                        </div>
+                                                    </MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                            <MudButton Variant="Variant.Filled"
+                                                       Color="Color.Primary"
+                                                       FullWidth="true"
+                                                       Size="Size.Small"
+                                                       Class="order-action-button"
+                                                       Disabled="@(GetReassignTarget(order.Id) is null)"
+                                                       OnClick="@(() => ReassignOrder(order))">
+                                                <MudIcon Icon="@Icons.Material.Filled.PersonAdd"
+                                                         Size="Size.Small"
+                                                         Class="mr-2" />
+                                                @Language.T("ПЕРЕНАЗНАЧИТЬ")
+                                            </MudButton>
+                                        </div>
+                                    }
+                                    @if (order.Status is not ("Закрыт" or "Проверка ИИ" or "Отклонён"))
+                                    {
+                                        <div class="order-action-card">
+                                            <div class="order-action-header">
+                                                <div class="order-action-icon priority">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Flag"
+                                                             Size="Size.Small" />
+                                                </div>
+                                                <div class="order-action-title">
+                                                    <strong>@Language.T("Изменить приоритет")</strong>
+                                                    <span>
+                                                        @Language.T("Текущий приоритет"):
+                                                        @Language.T(order.Priority)
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <MudSelect T="string"
+                                                       Value="@(priorityTargets.GetValueOrDefault(order.Id) ?? order.Priority)"
+                                                       ValueChanged="@(v => priorityTargets[order.Id] = v)"
+                                                       Label="@Language.T("Новый приоритет")"
+                                                       Variant="Variant.Outlined"
+                                                       Margin="Margin.Dense"
+                                                       FullWidth="true">
+                                                @foreach (var p in priorities)
+                                                {
+                                                    <MudSelectItem T="string" Value="@p">
+                                                        @Language.T(p)
+                                                    </MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                            <MudButton Variant="Variant.Outlined"
+                                                       Color="Color.Primary"
+                                                       FullWidth="true"
+                                                       Size="Size.Small"
+                                                       Class="order-action-button"
+                                                       Disabled="@(priorityTargets.GetValueOrDefault(order.Id) is null ||
+                                                                   priorityTargets.GetValueOrDefault(order.Id) == order.Priority)"
+                                                       OnClick="@(() => ChangePriority(order))">
+                                                <MudIcon Icon="@Icons.Material.Filled.Flag"
+                                                         Size="Size.Small"
+                                                         Class="mr-2" />
+                                                @Language.T("СМЕНИТЬ ПРИОРИТЕТ")
+                                            </MudButton>
+                                        </div>
+                                    }
+                                </div>
                                 @if (order.Status is "Проверка ИИ" or "На доработку")
                                 {
                                     var evaluation = order.AiEvaluations.OrderByDescending(x => x.EvaluatedAt).FirstOrDefault();
@@ -147,5 +320,43 @@ else
                 }
             </div>
         </section>
+        @if (isQrCameraOpen)
+        {
+            <div class="qr-scanner-overlay">
+                <div class="qr-scanner-modal">
+                    <div class="qr-scanner-header">
+                        <MudText Typo="Typo.h6" Class="font-weight-bold">
+                            @Language.T("Сканирование QR-кода")
+                        </MudText>
+
+                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                       Color="Color.Default"
+                                       OnClick="CloseQrCamera" />
+                    </div>
+
+                    <div class="qr-camera-frame">
+                        <video id="qrCameraPreview"
+                               autoplay
+                               playsinline
+                               muted>
+                        </video>
+
+                        <div class="qr-camera-corners"></div>
+
+                        <MudText Class="qr-camera-hint">
+                            @Language.T("Наведите камеру на QR-код оборудования")
+                        </MudText>
+                    </div>
+
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               OnClick="CloseQrCamera"
+                               Class="mt-3">
+                        @Language.T("Закрыть")
+                    </MudButton>
+                </div>
+            </div>
+        }
     </MudContainer>
 }

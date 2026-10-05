@@ -19,14 +19,20 @@ namespace NaryadAi.Components.Pages.Master
         [Inject] private WorkOrderService WorkOrderService { get; set; } = default!;
         [Inject] private WorkOrderChangeNotifier ChangeNotifier { get; set; } = default!;
         [Inject] private AppLanguageService Language { get; set; } = default!;
-
+        [Inject] private WorkOrderPhotoService PhotoService { get; set; } = default!;
         private bool isAuthorized = false;
         private int currentMasterId = 0;
         private int refreshPending;
+
+        private bool isQrCameraOpen;
         private bool suppressNotifierRefresh;
         private bool disposed;
-
-        // Модель для заполнения формы
+        private string? filterSite;
+        private int? filterEquipment;
+        private int? filterExecutor;
+        private string? filterPriority;
+        private int? recommendedWorkerId;
+        private Microsoft.AspNetCore.Components.Forms.IBrowserFile? photoBefore;
         private WorkOrder newOrder = new WorkOrder { Type = "Плановый", Priority = "Обычный" };
         private DateTime deadlineLocal = DateTime.Now.AddHours(24);
         private string selectedStatus = "Все";
@@ -39,14 +45,25 @@ namespace NaryadAi.Components.Pages.Master
             ("Завершены", ["Закрыт", "Отклонён"])
         ];
 
-        // Списки для выпадающих меню
         private List<Equipment> equipmentList = new();
         private List<Employee> workers = new();
+        private List<Site> siteList = new();
+        private List<Equipment> filteredEquipmentList = new();
+
+        private int? selectedSiteId;
+        private int? selectedEquipmentId;
         private List<WorkOrder> boardOrders = new();
 
-        private IEnumerable<WorkOrder> FilteredOrders => selectedStatus == "Все"
-            ? boardOrders
-            : boardOrders.Where(x => x.Status == selectedStatus);
+        private IEnumerable<WorkOrder> FilteredOrders => boardOrders
+            .Where(x => selectedStatus == "Все" || x.Status == selectedStatus)
+            .Where(x => string.IsNullOrEmpty(filterSite) || x.Location == filterSite || x.Equipment?.Site?.Name == filterSite)
+            .Where(x => filterEquipment == null || x.EquipmentId == filterEquipment)
+            .Where(x => filterExecutor == null || x.ExecutorId == filterExecutor)
+            .Where(x => string.IsNullOrEmpty(filterPriority) || x.Priority == filterPriority);
+        private int MasterIssued => boardOrders.Count(x => x.CreatedAt >= DateTime.UtcNow.AddHours(-12));
+        private int MasterCompleted => boardOrders.Count(x => x.CompletedAt >= DateTime.UtcNow.AddHours(-12));
+        private int MasterOverdue => boardOrders.Count(x => x.Deadline < DateTime.UtcNow && x.ClosedAt == null);
+        private int MasterIdle => boardOrders.Where(x => x.Status is "Выдан" or "В очереди" or "В работе" or "Приостановлен").Select(x => x.EquipmentId).Distinct().Count();
 
         protected override async Task OnAfterRenderAsync(bool firstRender)
         {
@@ -54,17 +71,12 @@ namespace NaryadAi.Components.Pages.Master
             {
                 var roleResult = await BrowserStorage.GetAsync<string>("UserRole");
                 var idResult = await BrowserStorage.GetAsync<int>("UserId");
-
-                // Пускаем Мастера и Админа
                 if (roleResult.Success && (roleResult.Value == "Master" || roleResult.Value == "Admin") && idResult.Success)
                 {
                     isAuthorized = true;
                     currentMasterId = idResult.Value;
-
-                    // Грузим списки из базы
                     ChangeNotifier.Changed += OnWorkOrderChanged;
                     await LoadData();
-
                     StateHasChanged();
                 }
                 else
@@ -74,26 +86,108 @@ namespace NaryadAi.Components.Pages.Master
             }
         }
 
+        private void PredictDeadline()
+        {
+            if (string.IsNullOrWhiteSpace(newOrder.Description))
+            {
+                Snackbar.Add(Language.T("Сначала опишите проблему"), Severity.Warning);
+                return;
+            }
+
+            var desc = newOrder.Description.ToLower();
+            int hours = 24;
+            string faultCodeSuggestion = "FC-05 — Ослабление крепежа"; 
+            if (desc.Contains("течь") || desc.Contains("масл")) { hours = 2; faultCodeSuggestion = "FC-06 — Утечка масла"; }
+            else if (desc.Contains("подшипник") || desc.Contains("замен") || desc.Contains("стук")) { hours = 4; faultCodeSuggestion = "FC-01 — Износ подшипника"; }
+            else if (desc.Contains("кабел") || desc.Contains("электр") || desc.Contains("замыкание")) { hours = 3; faultCodeSuggestion = "FC-12 — Обрыв кабеля"; }
+            else if (desc.Contains("вибрац")) { hours = 4; faultCodeSuggestion = "FC-09 — Повышенная вибрация"; }
+            else if (newOrder.Priority == "Аварийный") { hours = 2; }
+
+            deadlineLocal = DateTime.Now.AddHours(hours);
+            Snackbar.Add($"{Language.T("ИИ предложил")}: {hours} {Language.T("ч")}. {Language.T("Вероятный шифр")}: {faultCodeSuggestion}", Severity.Info);
+        }
+
         private async Task LoadData()
         {
-            equipmentList = await DbContext.Equipments.AsNoTracking().Include(e => e.Site).OrderBy(e => e.Location).ToListAsync();
-            workers = await DbContext.Employees.AsNoTracking().Where(e => e.Role == "Worker").OrderBy(e => e.FullName).ToListAsync();
-            boardOrders = await DbContext.WorkOrders.AsNoTracking().Include(x => x.Equipment).Include(x => x.Executor)
-                .Include(x => x.AiEvaluations).OrderByDescending(x => x.CreatedAt).Take(200).ToListAsync();
+            siteList = await DbContext.Sites
+                .AsNoTracking()
+                .OrderBy(s => s.Name)
+                .ToListAsync();
+
+            equipmentList = await DbContext.Equipments
+                .AsNoTracking()
+                .Include(e => e.Site)
+                .OrderBy(e => e.Name)
+                .ToListAsync();
+
+            workers = await DbContext.Employees
+                .AsNoTracking()
+                .Where(e => e.Role == "Worker")
+                .OrderBy(e => e.FullName)
+                .ToListAsync();
+
+            boardOrders = await DbContext.WorkOrders
+                .AsNoTracking()
+                .Include(x => x.Equipment)
+                .Include(x => x.Executor)
+                .Include(x => x.AiEvaluations)
+                .OrderByDescending(x => x.CreatedAt)
+                .Take(200)
+                .ToListAsync();
+
+            filteredEquipmentList = new();
+        }
+
+        private void OnSiteSelected(int? siteId)
+        {
+            selectedSiteId = siteId;
+
+            selectedEquipmentId = null;
+            newOrder.EquipmentId = 0;
+            newOrder.Location = string.Empty;
+
+            if (selectedSiteId.HasValue)
+            {
+                filteredEquipmentList = equipmentList
+                    .Where(e => e.SiteId == selectedSiteId.Value)
+                    .OrderBy(e => e.Name)
+                    .ToList();
+            }
+            else
+            {
+                filteredEquipmentList = new();
+            }
+
+            recommendedWorkerId = null;
         }
 
         private void OnWorkOrderChanged(WorkOrderUpdate update)
         {
             if (suppressNotifierRefresh || Interlocked.Exchange(ref refreshPending, 1) != 0)
                 return;
-
             _ = InvokeAsync(async () =>
             {
                 try
                 {
                     await Task.Delay(50);
-                    if (disposed || !isAuthorized) return;
+                    if (disposed || !isAuthorized)
+                        return;
+                    var relatedOrder = boardOrders.FirstOrDefault(x => x.Id == update.WorkOrderId);
                     await LoadData();
+                    if (!string.IsNullOrWhiteSpace(update.Message) &&
+                        (relatedOrder == null || relatedOrder.MasterId == currentMasterId))
+                    {
+                        await JSRuntime.InvokeVoidAsync(
+                            "naryadNotifications.show",
+                            update.Emergency
+                                ? $"АВАРИЙНЫЙ наряд {update.WorkOrderId}"
+                                : $"Контроль наряда {update.WorkOrderId}",
+                            new
+                            {
+                                body = update.Message,
+                                data = update.Emergency ? "emergency" : "normal"
+                            });
+                    }
                     StateHasChanged();
                 }
                 finally
@@ -103,14 +197,13 @@ namespace NaryadAi.Components.Pages.Master
             });
         }
 
-            private DotNetObjectReference<MasterPanel>? dotNetRef;
+        private DotNetObjectReference<MasterPanel>? dotNetRef;
     
     protected override void OnInitialized()
     {
         dotNetRef = DotNetObjectReference.Create(this);
         Language.Changed += OnLanguageChanged;
     }
-
     private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
 
     private async Task StartVoiceInput()
@@ -125,23 +218,47 @@ namespace NaryadAi.Components.Pages.Master
         StateHasChanged();
     }
 
-    private async Task ScanQrCode()
-    {
-        try { await JSRuntime.InvokeVoidAsync("naryadHardware.scanQrCode", dotNetRef, nameof(OnQrCodeResult)); } catch {}
-    }
-
-    [JSInvokable]
-    public void OnQrCodeResult(int equipmentId)
-    {
-        if (equipmentList.Any(e => e.Id == equipmentId))
+        private async Task ScanQrCode()
         {
-            newOrder.EquipmentId = equipmentId;
+            isQrCameraOpen = true;
             StateHasChanged();
-            Snackbar.Add(Language.T("Оборудование распознано по QR!"), Severity.Success);
-        }
-    }
 
-    public void Dispose()
+            try
+            {
+                await Task.Delay(100);
+
+                await JSRuntime.InvokeVoidAsync(
+                    "naryadHardware.startQrCamera");
+            }
+            catch (Exception ex)
+            {
+                isQrCameraOpen = false;
+
+                Snackbar.Add(
+                    $"Не удалось открыть камеру: {ex.Message}",
+                    Severity.Error);
+
+                StateHasChanged();
+            }
+        }
+
+        private async Task CloseQrCamera()
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync(
+                    "naryadHardware.stopQrCamera");
+            }
+            catch
+            {
+                
+            }
+
+            isQrCameraOpen = false;
+            StateHasChanged();
+        }
+
+        public void Dispose()
     {
         disposed = true;
         Language.Changed -= OnLanguageChanged;
@@ -150,22 +267,22 @@ namespace NaryadAi.Components.Pages.Master
 
         private async Task CreateOrder()
         {
-            // Базовая проверка
             if (string.IsNullOrWhiteSpace(newOrder.Description) || newOrder.EquipmentId == 0 || newOrder.ExecutorId == null)
             {
                 Snackbar.Add(Language.T("Заполните описание, выберите оборудование и исполнителя"), Severity.Warning);
                 return;
             }
-
-            // Вытаскиваем Участок из выбранного оборудования (согласно ТЗ)
             var eq = equipmentList.First(e => e.Id == newOrder.EquipmentId);
-
             newOrder.Location = eq.Site?.Name ?? eq.Location;
             newOrder.Deadline = DateTime.SpecifyKind(deadlineLocal, DateTimeKind.Local).ToUniversalTime();
             suppressNotifierRefresh = true;
             try
             {
                 await WorkOrderService.CreateAsync(newOrder, currentMasterId);
+                if (photoBefore != null)
+                {
+                    await PhotoService.SaveAsync(newOrder.Id, currentMasterId, "До", photoBefore);
+                }
             }
             catch (InvalidOperationException ex)
             {
@@ -178,10 +295,9 @@ namespace NaryadAi.Components.Pages.Master
             }
 
             Snackbar.Add($"{Language.T("Наряд")} {newOrder.Number} {Language.T("Наряд создан").ToLower()}!", Severity.Success);
-
-            // Очищаем форму для следующего наряда
             newOrder = new WorkOrder { Type = "Плановый", Priority = "Обычный" };
             deadlineLocal = DateTime.Now.AddHours(24);
+            photoBefore = null; 
             await LoadData();
         }
 
@@ -219,6 +335,48 @@ namespace NaryadAi.Components.Pages.Master
 
         private int? GetReassignTarget(int orderId) => reassignTargets.GetValueOrDefault(orderId);
 
+        private void OnEquipmentSelected(int? eqId)
+        {
+            selectedEquipmentId = eqId;
+            recommendedWorkerId = null;
+
+            if (!eqId.HasValue)
+            {
+                newOrder.EquipmentId = 0;
+                newOrder.Location = string.Empty;
+                return;
+            }
+
+            var equipment = equipmentList
+                .FirstOrDefault(e => e.Id == eqId.Value);
+
+            if (equipment is null)
+            {
+                newOrder.EquipmentId = 0;
+                newOrder.Location = string.Empty;
+                return;
+            }
+
+            newOrder.EquipmentId = equipment.Id;
+            newOrder.Location = equipment.Site?.Name ?? equipment.Location;
+
+            var bestWorker = workers
+                .Where(w => w.Status == "Свободен")
+                .OrderByDescending(w => w.Grade)
+                .FirstOrDefault();
+
+            recommendedWorkerId = bestWorker?.Id;
+
+            if (newOrder.ExecutorId == null && recommendedWorkerId.HasValue)
+            {
+                newOrder.ExecutorId = recommendedWorkerId.Value;
+
+                Snackbar.Add(
+                    Language.T("ИИ подобрал наиболее подходящего исполнителя"),
+                    Severity.Info);
+            }
+        }
+
         private async Task ReassignOrder(WorkOrder order)
         {
             if (GetReassignTarget(order.Id) is not int newExecutorId)
@@ -251,6 +409,12 @@ namespace NaryadAi.Components.Pages.Master
             }
             catch (InvalidOperationException ex) { Snackbar.Add(ex.Message, Severity.Warning); }
             finally { suppressNotifierRefresh = false; }
+        }
+
+        private void UploadPhotoBefore(Microsoft.AspNetCore.Components.Forms.InputFileChangeEventArgs e)
+        {
+            photoBefore = e.File;
+            Snackbar.Add(Language.T("Фото до добавлено"), Severity.Info);
         }
 
         private static string WorkerStatusClass(string status) => status switch

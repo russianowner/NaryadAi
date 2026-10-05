@@ -54,6 +54,14 @@ else
                             <div class="info-row"><MudIcon Icon="@Icons.Material.Filled.Place" Size="Size.Small" /> <b>@Language.T("Участок:")</b> @task.Location</div>
                             <div class="info-row"><MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" /> <b>@Language.T("Оборудование:")</b> @task.Equipment?.Name</div>
                             <MudText Typo="Typo.body2" Class="mt-2 task-desc">@task.Description</MudText>
+
+                            @if (task.Status == "На доработку" && task.AiEvaluations != null && task.AiEvaluations.Any())
+                            {
+                                var lastEval = task.AiEvaluations.OrderByDescending(e => e.EvaluatedAt).First();
+                                <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Dense="true" Class="mt-2 py-1 px-2" Style="font-size: 0.85rem;">
+                                    <strong>@Language.T("Замечание ИИ:")</strong> @lastEval.Explanation
+                                </MudAlert>
+                            }
                         </MudCardContent>
 
                         <MudCardActions Class="d-flex flex-wrap gap-2 pa-3">
@@ -79,7 +87,6 @@ else
         }
         else if (currentView == "Reason")
         {
-            <!-- ФОРМА УКАЗАНИЯ ПРИЧИНЫ (Отказ / Пауза) -->
             <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Class="mb-4" OnClick="BackToList">@Language.T("Назад")</MudButton>
             <MudText Typo="Typo.h5" Class="mb-4 font-weight-bold">@(pendingStatus == "Отклонён" ? Language.T("Отказ от наряда") : Language.T("Приостановка работ"))</MudText>
             
@@ -94,12 +101,14 @@ else
         }
         else if (currentView == "CloseForm")
         {
-            <!-- ФОРМА ЗАКРЫТИЯ НАРЯДА (п. 5.3 ТЗ) -->
             <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Color="Color.Default" Class="mb-4" OnClick="BackToList">@Language.T("Назад")</MudButton>
             <MudText Typo="Typo.h5" Class="mb-4 font-weight-bold">@Language.T("Закрытие наряда") @selectedTask?.Number</MudText>
 
             <MudCard Elevation="2" Class="pa-4 rounded-lg mb-4">
-                <MudTextField @bind-Value="selectedTask!.CloseWorksDone" Label="@Language.T("Выполненные работы")" Lines="2" Variant="Variant.Outlined" Class="mb-4" />
+                <div class="d-flex align-start gap-2 mb-4">
+                    <MudTextField @bind-Value="selectedTask!.CloseWorksDone" Label="@Language.T("Выполненные работы")" Lines="2" Variant="Variant.Outlined" Class="flex-grow-1" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Mic" Color="Color.Primary" Variant="Variant.Filled" OnClick="StartVoiceInput" title="@Language.T("Голосовой ввод")" Class="mt-2" />
+                </div>
                 
                 <MudSelect T="string" @bind-Value="selectedTask.CloseFaultCode" Label="@Language.T("Шифр неисправности")" Variant="Variant.Outlined" Class="mb-4">
                     @foreach (var fault in faultCodes)
@@ -126,8 +135,6 @@ else
                 {
                     <MudChip T="string" Class="mb-2" OnClose="@(() => RemoveMaterial(material))">@material.Material — @material.Quantity @material.Unit</MudChip>
                 }
-
-                <!-- Фото обязательно для внеплановых работ по ТЗ -->
                 <div class="photo-upload-zone mb-4">
                     <label class="photo-picker action-btn">
                         <MudIcon Icon="@Icons.Material.Filled.CameraAlt" />

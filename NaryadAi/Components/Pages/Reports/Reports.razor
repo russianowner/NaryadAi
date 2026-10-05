@@ -24,6 +24,18 @@ else
             <div class="report-filters">
                 <MudDatePicker @bind-Date="startDate" Label="@Language.T("С даты")" Variant="Variant.Outlined" />
                 <MudDatePicker @bind-Date="endDate" Label="@Language.T("По дату")" Variant="Variant.Outlined" />
+                <MudSelect T="string" @bind-Value="selectedSite" Label="@Language.T("Участок")" Variant="Variant.Outlined" Clearable="true">
+                    @foreach (var site in availableSites)
+                    {
+                        <MudSelectItem Value="@site">@site</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudSelect T="int?" @bind-Value="selectedExecutor" Label="@Language.T("Исполнитель")" Variant="Variant.Outlined" Clearable="true">
+                    @foreach (var worker in availableWorkers)
+                    {
+                        <MudSelectItem T="int?" Value="@worker.Id">@worker.FullName</MudSelectItem>
+                    }
+                </MudSelect>
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" Disabled="isBusy"
                            StartIcon="@Icons.Material.Filled.Search" Class="report-action-btn" OnClick="LoadReport">
                     @Language.T("Показать")
@@ -40,11 +52,31 @@ else
             <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
                 <MudTabPanel Text="@Language.T("Сводка смен")" Icon="@Icons.Material.Filled.Dashboard">
                     <div class="report-summary mb-4">
-                        <MudPaper Class="pa-4 report-stat"><span>@Language.T("Выдано")</span><strong>@reportOrders.Count</strong></MudPaper>
-                        <MudPaper Class="pa-4 report-stat"><span>@Language.T("Выполнено")</span><strong>@reportOrders.Count(x => x.ClosedAt != null)</strong></MudPaper>
-                        <MudPaper Class="pa-4 report-stat"><span>@Language.T("Просрочено")</span><strong>@reportOrders.Count(IsOverdue)</strong></MudPaper>
-                        <MudPaper Class="pa-4 report-stat"><span>@Language.T("Отклонено")</span><strong>@reportOrders.Count(x => x.Status == "Отклонён")</strong></MudPaper>
-                        <MudPaper Class="pa-4 report-stat"><span>@Language.T("Простои (шт)")</span><strong>@IdleEquipmentCount</strong></MudPaper>
+                        <MudPaper Class="pa-4 report-stat"
+                                  Style="display:flex; align-items:center; justify-content:space-between; gap:20px;">
+                            <span>@Language.T("Выдано")</span>
+                            <strong>@reportOrders.Count</strong>
+                        </MudPaper>
+                        <MudPaper Class="pa-4 report-stat"
+                                  Style="display:flex; align-items:center; justify-content:space-between; gap:20px;">
+                            <span>@Language.T("Выполнено")</span>
+                            <strong>@reportOrders.Count(x => x.ClosedAt != null)</strong>
+                        </MudPaper>
+                        <MudPaper Class="pa-4 report-stat"
+                                  Style="display:flex; align-items:center; justify-content:space-between; gap:20px;">
+                            <span>@Language.T("Просрочено")</span>
+                            <strong>@reportOrders.Count(IsOverdue)</strong>
+                        </MudPaper>
+                        <MudPaper Class="pa-4 report-stat"
+                                  Style="display:flex; align-items:center; justify-content:space-between; gap:20px;">
+                            <span>@Language.T("Отклонено")</span>
+                            <strong>@reportOrders.Count(x => x.Status == "Отклонён")</strong>
+                        </MudPaper>
+                        <MudPaper Class="pa-4 report-stat"
+                                  Style="display:flex; align-items:center; justify-content:space-between; gap:20px;">
+                            <span>@Language.T("Простои (шт)")</span>
+                            <strong>@IdleEquipmentCount</strong>
+                        </MudPaper>
                     </div>
 
                     <MudPaper Elevation="0" Outlined="true" Class="pa-4 mt-4 bg-light">
@@ -64,7 +96,12 @@ else
                 </MudTabPanel>
 
                 <MudTabPanel Text="@Language.T("Рейтинг исполнителей")" Icon="@Icons.Material.Filled.Star">
-                    <MudTable Items="reportRatings" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
+                    <MudTable Items="reportRatings"
+                              Dense="true"
+                              Hover="true"
+                              Breakpoint="Breakpoint.Sm"
+                              RowsPerPage="10"
+                              RowsPerPageOptions="new int[] { 10, 25, 50 }">
                         <HeaderContent>
                             <MudTh>@Language.T("Сотрудник")</MudTh>
                             <MudTh>@Language.T("Рейтинг")</MudTh>
@@ -88,11 +125,46 @@ else
                             <MudTd DataLabel="@Language.T("Доработки")">@context.Rating.ReworkRate.ToString("0.0")%</MudTd>
                             <MudTd DataLabel="@Language.T("Отказы")">@context.Rating.RejectionRate.ToString("0.0")%</MudTd>
                         </RowTemplate>
+                        <PagerContent>
+                            <MudTablePager RowsPerPageString="@Language.T("Строк на странице")"
+                                           PageSizeOptions="new int[] { 10, 25, 50 }" />
+                        </PagerContent>
+                    </MudTable>
+                </MudTabPanel>
+
+                <MudTabPanel Text="@Language.T("Расход материалов")" Icon="@Icons.Material.Filled.Inventory">
+                    <MudTable Items="reportOrders.SelectMany(o => o.Materials.Select(m => new { m.Material, m.Quantity, m.Unit, Order = o })).GroupBy(m => new { m.Material, m.Unit }).Select(g => new { Name = g.Key.Material, Unit = g.Key.Unit, Total = g.Sum(x => x.Quantity), UsageCount = g.Count() }).OrderByDescending(x => x.Total)" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" RowsPerPage="10" RowsPerPageOptions="new int[] { 10, 25, 50 }">
+                        <HeaderContent>
+                            <MudTh>@Language.T("Материал / Запчасть")</MudTh>
+                            <MudTh Style="text-align:center;">@Language.T("Ед. изм.")</MudTh>
+                            <MudTh Style="text-align:center;">@Language.T("Списано всего")</MudTh>
+                            <MudTh Style="text-align:center;">@Language.T("Использовано в нарядах (шт)")</MudTh>
+                        </HeaderContent>
+                        <RowTemplate Context="mat">
+                            <MudTd DataLabel="@Language.T("Материал")"><strong>@mat.Name</strong></MudTd>
+                            <MudTd DataLabel="@Language.T("Ед. изм.")" Style="text-align:center;">@mat.Unit</MudTd>
+                            <MudTd DataLabel="@Language.T("Списано всего")" Style="text-align:center;">
+                                <MudChip T="string" Color="Color.Primary" Size="Size.Small" Variant="Variant.Filled">@mat.Total.ToString("0.##")</MudChip>
+                            </MudTd>
+                            <MudTd DataLabel="@Language.T("В нарядах")" Style="text-align:center;">@mat.UsageCount</MudTd>
+                        </RowTemplate>
+                        <NoRecordsContent>
+                            <MudText Typo="Typo.body2" Class="pa-4 text-muted">@Language.T("Нет данных о списаниях за период")</MudText>
+                        </NoRecordsContent>
+                        <PagerContent>
+                            <MudTablePager RowsPerPageString="@Language.T("Строк на странице")"
+                                           PageSizeOptions="new int[] { 10, 25, 50 }" />
+                        </PagerContent>
                     </MudTable>
                 </MudTabPanel>
 
                 <MudTabPanel Text="@Language.T("Все наряды")" Icon="@Icons.Material.Filled.List">
-                    <MudTable Items="reportOrders" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
+                    <MudTable Items="reportOrders"
+                              Dense="true"
+                              Hover="true"
+                              Breakpoint="Breakpoint.Sm"
+                              RowsPerPage="10"
+                              RowsPerPageOptions="new int[] { 10, 25, 50 }">
                         <HeaderContent>
                             <MudTh>@Language.T("Номер")</MudTh>
                             <MudTh>@Language.T("Участок")</MudTh>
@@ -103,12 +175,26 @@ else
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd DataLabel="@Language.T("Номер")">@context.Number</MudTd>
-                            <MudTd DataLabel="@Language.T("Участок")">@(context.Site?.Name ?? context.Location)</MudTd>
-                            <MudTd DataLabel="@Language.T("Оборудование")">@context.Equipment?.Name</MudTd>
-                            <MudTd DataLabel="@Language.T("Исполнитель")">@context.Executor?.FullName</MudTd>
-                            <MudTd DataLabel="@Language.T("Статус")">@Language.T(context.Status)</MudTd>
-                            <MudTd DataLabel="@Language.T("Срок")">@context.Deadline.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</MudTd>
+                            <MudTd DataLabel="@Language.T("Участок")">
+                                @(context.Site?.Name ?? context.Location)
+                            </MudTd>
+                            <MudTd DataLabel="@Language.T("Оборудование")">
+                                @context.Equipment?.Name
+                            </MudTd>
+                            <MudTd DataLabel="@Language.T("Исполнитель")">
+                                @context.Executor?.FullName
+                            </MudTd>
+                            <MudTd DataLabel="@Language.T("Статус")">
+                                @Language.T(context.Status)
+                            </MudTd>
+                            <MudTd DataLabel="@Language.T("Срок")">
+                                @context.Deadline.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+                            </MudTd>
                         </RowTemplate>
+                        <PagerContent>
+                            <MudTablePager RowsPerPageString="@Language.T("Строк на странице")"
+                                           PageSizeOptions="new int[] { 10, 25, 50 }" />
+                        </PagerContent>
                     </MudTable>
                 </MudTabPanel>
             </MudTabs>

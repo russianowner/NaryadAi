@@ -10,7 +10,7 @@ public record AnomalyInsight(
     string Title, 
     string Description, 
     string Recommendation, 
-    string Severity // "High", "Medium", "Warning"
+    string Severity 
 );
 
 public class AiAnalyticsService(IHttpClientFactory httpClientFactory, IConfiguration configuration)
@@ -71,8 +71,6 @@ public class AiAnalyticsService(IHttpClientFactory httpClientFactory, IConfigura
     public async Task<List<AnomalyInsight>> DetectAnomaliesAsync(IReadOnlyList<WorkOrder> orders, CancellationToken cancellationToken = default)
     {
         var insights = new List<AnomalyInsight>();
-
-        // 1. Повторные неисправности одного шифра на одном оборудовании
         var recurringFaults = orders
             .Where(x => x.Equipment != null && !string.IsNullOrWhiteSpace(x.CloseFaultCode))
             .GroupBy(x => new { EquipmentName = x.Equipment!.Name, x.CloseFaultCode })
@@ -91,8 +89,6 @@ public class AiAnalyticsService(IHttpClientFactory httpClientFactory, IConfigura
                 Severity: rf.Count() >= 4 ? "High" : "Medium"
             ));
         }
-
-        // 2. Оборудование с высоким количеством аварийных остановок
         var problemEquipment = orders
             .Where(x => x.Equipment != null)
             .GroupBy(x => x.Equipment!.Name)
@@ -119,7 +115,6 @@ public class AiAnalyticsService(IHttpClientFactory httpClientFactory, IConfigura
             ));
         }
 
-        // 3. Доработки и возвраты нарядов
         var reworkOrders = orders
             .Where(x => x.Equipment != null && x.Status == WorkOrderStates.Rework)
             .GroupBy(x => x.Equipment!.Name)
@@ -136,8 +131,6 @@ public class AiAnalyticsService(IHttpClientFactory httpClientFactory, IConfigura
                 Severity: "Warning"
             ));
         }
-
-        // Обогащение выводами от языковой модели (если доступен Groq), чтобы добавить динамические рекомендации
         var groqKey = configuration["Ai:GroqApiKey"];
         if (!string.IsNullOrWhiteSpace(groqKey) && insights.Count > 0)
         {
@@ -182,7 +175,7 @@ public class AiAnalyticsService(IHttpClientFactory httpClientFactory, IConfigura
             }
             catch
             {
-                // Не блокируем аналитику, если вызов к LLM упал
+                
             }
         }
 

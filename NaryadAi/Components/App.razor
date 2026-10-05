@@ -21,11 +21,11 @@
     <Routes @rendermode="InteractiveServer" />
 
     <ReconnectModal />
+    <script src="@Assets["download.js"]"></script>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
 
     <script>
-        // Регистрация Service Worker для PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./service-worker.js')
@@ -33,8 +33,6 @@
                     .catch(err => console.error('Ошибка регистрации Service Worker:', err));
             });
         }
-
-        // Web Notification API и звуковой сигнал аварийных нарядов
         window.naryadNotifications = {
             requestPermission: async function() {
                 if (!('Notification' in window)) return false;
@@ -71,8 +69,6 @@
                 };
             }
         };
-
-        // Поддержка оборудования (микрофон, распознавание голоса, QR-код)
         window.naryadHardware = {
             startListening: function (dotNetReference, methodName) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -94,15 +90,51 @@
                 };
                 recognition.start();
             },
-            scanQrCode: function (dotNetReference, methodName) {
-                // В демо-режиме имитируем сканирование технологического шильдика оборудования
-                const simulatedEquipmentId = prompt('Имитация сканирования QR-кода оборудования.\nВведите ID оборудования (например 1, 2, 3 или 4) или нажмите OK для автовыбора:', '1');
-                const id = parseInt(simulatedEquipmentId) || 1;
-                dotNetReference.invokeMethodAsync(methodName, id);
-            }
-        };
+                startQrCamera: async function() {
+                    try {
+                        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                            throw new Error("Браузер не поддерживает доступ к камере.");
+                        }
 
-        // Вспомогательный метод смены языка
+                        const video = document.getElementById("qrCameraPreview");
+
+                        if (!video) {
+                            throw new Error("Элемент камеры ещё не найден.");
+                        }
+
+                        const stream = await navigator.mediaDevices.getUserMedia({
+                            video: {
+                                facingMode: { ideal: "environment" },
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            },
+                            audio: false
+                        });
+
+                        video.srcObject = stream;
+
+                        await video.play();
+                    }
+                    catch (err) {
+                        console.error("Ошибка камеры:", err);
+                        throw err;
+                    }
+                },
+
+                stopQrCamera: function() {
+                    const video = document.getElementById("qrCameraPreview");
+
+                    if (!video || !video.srcObject) {
+                        return;
+                    }
+
+                    const tracks = video.srcObject.getTracks();
+
+                    tracks.forEach(track => track.stop());
+
+                    video.srcObject = null;
+                }
+        };
         window.naryadAi = {
             setLanguage: function(lang) {
                 document.documentElement.lang = lang;

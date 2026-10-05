@@ -51,19 +51,15 @@ public class WorkOrderDeadlineMonitor(IServiceScopeFactory scopes, IHubContext<W
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var now = DateTime.UtcNow;
-
         var orders = await db.WorkOrders.AsNoTracking().Include(x => x.Equipment).Include(x => x.Site).Include(x => x.Executor)
             .Where(x => ActiveStates.Contains(x.Status)).ToListAsync(cancellationToken);
         if (orders.Count == 0) return;
-
-        // Events are not loaded wholesale: only SLA markers are fetched for the active orders.
         var ids = orders.Select(x => x.Id).ToList();
         var existing = (await db.WorkOrderEvents.AsNoTracking()
                 .Where(x => ids.Contains(x.WorkOrderId) && SlaActions.Contains(x.Action))
                 .Select(x => new { x.WorkOrderId, x.Action }).ToListAsync(cancellationToken))
             .Select(x => (x.WorkOrderId, x.Action)).ToHashSet();
 
-        // Last human comment per order (system SLA events excluded) for the message text.
         var lastComments = (await db.WorkOrderEvents.AsNoTracking()
                 .Where(x => ids.Contains(x.WorkOrderId) && x.Comment != null && x.Comment != "" && !x.Action.StartsWith("SLA:"))
                 .Select(x => new { x.WorkOrderId, x.Comment, x.OccurredAt }).ToListAsync(cancellationToken))
@@ -104,8 +100,6 @@ public class WorkOrderDeadlineMonitor(IServiceScopeFactory scopes, IHubContext<W
                     comment = $"Наряд №{order.Number} не принят за {limit} мин. {Details()} {advice}";
                 }
             }
-
-            // Deadline reminders do not apply to paused orders: the clock is stopped by the master/worker.
             if (action is null && order.Status != WorkOrderStates.Paused)
             {
                 if (order.Deadline > now && order.Deadline <= now.AddMinutes(30) && !Done(DeadlineReminder))
@@ -134,12 +128,10 @@ public class WorkOrderDeadlineMonitor(IServiceScopeFactory scopes, IHubContext<W
         }
         catch (DbUpdateException ex)
         {
-            // Another instance/cycle wrote concurrently; skip notifications, next tick re-evaluates.
             logger.LogWarning(ex, "Не удалось сохранить SLA-события; повтор на следующем проходе");
             return;
         }
 
-        // Notify only after events are persisted so users never see a notification without a record.
         foreach (var (order, ev) in pending)
         {
             var emergency = IsEmergency(order);

@@ -92,18 +92,19 @@ public partial class Profile : ComponentBase, IDisposable
 
         var orders = await query
             .Include(order => order.Equipment)
+            .Include(order => order.AiEvaluations) 
             .OrderByDescending(order => order.CreatedAt)
             .ToListAsync();
 
         totalOrders = orders.Count;
         activeOrders = orders.Count(order => IsActive(order.Status));
-        completedOrders = orders.Count(order => order.Status is "Исполнено" or "Закрыт");
+        completedOrders = orders.Count(order => order.Status is WorkOrderStates.Completed or WorkOrderStates.Closed);
         reworkOrders = orders.Count(order => order.Status == "На доработку");
         overdueOrders = orders.Count(order =>
             order.Deadline < DateTime.UtcNow &&
-            order.Status is not ("Исполнено" or "Закрыт" or "Отклонен"));
-        recentOrders = orders.Take(6).ToList();
-        
+            order.Status is not (WorkOrderStates.Completed or WorkOrderStates.Closed or WorkOrderStates.Rejected));
+        recentOrders = orders.ToList();
+
         if (currentEmployee.Role == "Worker")
         {
             rating = await RatingService.CalculateAsync(currentEmployee.Id);

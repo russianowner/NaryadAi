@@ -27,6 +27,12 @@ public partial class Reports : ComponentBase, IDisposable
     private DateTime? endDate = DateTime.Today;
     private List<WorkOrder> reportOrders = [];
     private List<Equipment> reportEquipment = [];
+
+    private string? selectedSite;
+    private int? selectedExecutor;
+    private List<string> availableSites = new();
+    private List<Employee> availableWorkers = new();
+
     private List<(Employee Worker, EmployeeRating Rating)> reportRatings = [];
     private string aiSummary = "Генерация сводки...";
     private int IdleEquipmentCount => reportEquipment.Count(e =>
@@ -60,9 +66,17 @@ public partial class Reports : ComponentBase, IDisposable
         isBusy = true;
         try
         {
+            availableSites = await DbContext.Sites.AsNoTracking().Select(s => s.Name).ToListAsync();
+            availableWorkers = await DbContext.Employees.AsNoTracking().Where(x => x.Role == "Worker").ToListAsync();
             var fromUtc = DateTime.SpecifyKind(startDate.Value.Date, DateTimeKind.Local).ToUniversalTime();
             var untilUtc = DateTime.SpecifyKind(endDate.Value.Date.AddDays(1), DateTimeKind.Local).ToUniversalTime();
-            reportOrders = await DbContext.WorkOrders.AsNoTracking()
+            var query = DbContext.WorkOrders.AsNoTracking().AsSplitQuery()
+                .Where(x => x.CreatedAt >= fromUtc && x.CreatedAt < untilUtc);
+            if (!string.IsNullOrWhiteSpace(selectedSite))
+                query = query.Where(x => x.Location == selectedSite || (x.Site != null && x.Site.Name == selectedSite));
+            if (selectedExecutor.HasValue)
+                query = query.Where(x => x.ExecutorId == selectedExecutor.Value);
+            reportOrders = await query
                 .AsSplitQuery()
                 .Where(x => x.CreatedAt >= fromUtc && x.CreatedAt < untilUtc)
                 .Include(x => x.Site)

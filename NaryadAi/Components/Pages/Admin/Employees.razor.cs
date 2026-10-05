@@ -11,17 +11,13 @@ namespace NaryadAi.Components.Pages.Admin
     {
         [Inject] private AppDbContext DbContext { get; set; } = default!;
         [Inject] private ISnackbar Snackbar { get; set; } = default!;
-
         [Inject] private ProtectedLocalStorage BrowserStorage { get; set; } = default!;
         [Inject] private NavigationManager Navigation { get; set; } = default!;
 
         private List<Employee> employees = new();
         private Employee newEmployee = new Employee { Role = "Worker" };
         private string searchString = "";
-
         private bool isAuthorized = false;
-
-        // Списки для выпадающих меню
         private List<ReferenceItem> specialties = new();
         private List<ReferenceItem> shifts = new();
         private List<ReferenceItem> brigades = new();
@@ -66,16 +62,19 @@ namespace NaryadAi.Components.Pages.Admin
         {
             if (string.IsNullOrWhiteSpace(newEmployee.FullName))
             {
-                Snackbar.Add("Введите ФИО сотрудника", Severity.Warning);
+                Snackbar.Add(Language.T("Введите ФИО сотрудника"), Severity.Warning);
                 return;
             }
 
             DbContext.Employees.Add(newEmployee);
             await DbContext.SaveChangesAsync();
 
-            Snackbar.Add($"Сотрудник {newEmployee.FullName} успешно добавлен", Severity.Success);
+            Snackbar.Add(
+                $"{Language.T("Сотрудник")} {newEmployee.FullName} {Language.T("успешно добавлен")}",
+                Severity.Success);
 
             await LoadEmployees();
+
             newEmployee = new Employee { Role = "Worker" };
         }
 
@@ -83,7 +82,9 @@ namespace NaryadAi.Components.Pages.Admin
         {
             DbContext.Employees.Remove(emp);
             await DbContext.SaveChangesAsync();
-            Snackbar.Add($"Сотрудник {emp.FullName} удален", Severity.Error);
+            Snackbar.Add(
+                $"{Language.T("Сотрудник")} {emp.FullName} {Language.T("удален")}",
+                Severity.Error);
             await LoadEmployees();
         }
 

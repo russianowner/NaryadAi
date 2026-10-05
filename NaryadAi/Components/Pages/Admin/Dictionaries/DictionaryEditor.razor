@@ -11,7 +11,13 @@
     </MudButton>
 </div>
 
-<MudTable Items="@items" Hover="true" Elevation="0" Outlined="true" Class="rounded-lg">
+<MudTable Items="@items"
+          Hover="true"
+          Elevation="0"
+          Outlined="true"
+          Class="rounded-lg"
+          RowsPerPage="10"
+          RowsPerPageOptions="new int[] { 10, 25, 50 }">
     <HeaderContent>
         <MudTh>Наименование</MudTh>
         <MudTh Style="width: 100px; text-align: center;">Действия</MudTh>
@@ -25,4 +31,8 @@
     <NoRecordsContent>
         <MudText Typo="Typo.body2" Class="pa-4 text-muted">Список пуст</MudText>
     </NoRecordsContent>
+    <PagerContent>
+        <MudTablePager RowsPerPageString="Строк на странице"
+                       PageSizeOptions="new int[] { 10, 25, 50 }" />
+    </PagerContent>
 </MudTable>

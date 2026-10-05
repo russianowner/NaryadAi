@@ -126,6 +126,14 @@
                                     @(order.Equipment?.Name ?? Language.T("Оборудование")) · @order.Location
                                 </MudText>
                                 <MudText Typo="Typo.body2" Class="order-description">@order.Description</MudText>
+                                @if (order.AiEvaluations != null && order.AiEvaluations.Any())
+                                {
+                                    var eval = order.AiEvaluations.OrderByDescending(e => e.EvaluatedAt).First();
+                                    <MudText Typo="Typo.caption" Color="Color.Tertiary" Class="mt-1 d-block font-weight-bold">
+                                        <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Size="Size.Small" Class="mr-1 mb-n1" />
+                                        @Language.T("Оценка ИИ: ") @eval.Score.ToString("0")/100 (@Language.T(eval.Verdict))
+                                    </MudText>
+                                }
                                 <div class="order-footer">
                                     <span>@Language.T(order.Type) · @Language.T(order.Priority)</span>
                                     <span>@Language.T("Срок:"): @order.Deadline.ToLocalTime().ToString("dd.MM HH:mm")</span>

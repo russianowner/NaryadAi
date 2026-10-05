@@ -3,11 +3,6 @@ using NaryadAi.Models;
 using NaryadAi.Services;
 
 namespace NaryadAi.Data;
-
-/// <summary>
-/// Seeds a realistic, deterministic demonstration dataset. It is deliberately opt-in
-/// and refuses to mix sample data into a database that already contains site data.
-/// </summary>
 public static class DemoDataSeeder
 {
     private const string MarkerInventoryNumber = "KM-DEMO-CV-07";

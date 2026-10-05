@@ -9,7 +9,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
-// Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -48,6 +47,8 @@ if (!isDesignTime)
     {
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await db.Database.MigrateAsync();
+        DataSeeder.Initialize(db);
+        await DemoDataSeeder.InitializeAsync(db);
     }
 }
 
@@ -82,7 +83,7 @@ if (!isDesignTime)
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Ошибка при инициализации БД: {ex.Message}");
+            Console.WriteLine($"БД: {ex.Message}");
         }
     }
 }

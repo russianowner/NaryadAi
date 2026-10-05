@@ -1,0 +1,76 @@
+﻿@using Microsoft.EntityFrameworkCore
+@using NaryadAi.Data
+@using NaryadAi.Models
+@using MudBlazor
+
+<MudGrid Class="mb-6">
+
+    <MudItem xs="12" md="5">
+        <MudTextField @bind-Value="newMaterialName"
+                      Label="Название материала / запчасти"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense" />
+    </MudItem>
+    <MudItem xs="12" md="3">
+        <MudSelect T="string"
+                   @bind-Value="newMaterialUnit"
+                   Label="Единица измерения"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense">
+            <MudSelectItem Value="@("шт.")">
+                шт.
+            </MudSelectItem>
+            <MudSelectItem Value="@("л")">
+                л
+            </MudSelectItem>
+            <MudSelectItem Value="@("м")">
+                м
+            </MudSelectItem>
+            <MudSelectItem Value="@("кг")">
+                кг
+            </MudSelectItem>
+        </MudSelect>
+    </MudItem>
+
+    <MudItem xs="12" md="4" Class="d-flex align-center">
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   FullWidth="true"
+                   OnClick="AddMaterial">
+            ДОБАВИТЬ
+        </MudButton>
+    </MudItem>
+</MudGrid>
+
+<MudTable Items="materials"
+          Hover="true"
+          Elevation="0"
+          Outlined="true"
+          Class="rounded-lg">
+    <HeaderContent>
+        <MudTh>Материал / запчасть</MudTh>
+        <MudTh>Единица</MudTh>
+        <MudTh Style="width:100px;text-align:center;">
+            Действия
+        </MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Материал">
+            <b>@context.Name</b>
+        </MudTd>
+        <MudTd DataLabel="Единица">
+            @context.Unit
+        </MudTd>
+        <MudTd Style="text-align:center;">
+            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                           Color="Color.Error"
+                           Size="Size.Small"
+                           OnClick="@(() => DeleteMaterial(context))" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Typo="Typo.body2" Class="pa-4">
+            Материалы ещё не добавлены
+        </MudText>
+    </NoRecordsContent>
+</MudTable>

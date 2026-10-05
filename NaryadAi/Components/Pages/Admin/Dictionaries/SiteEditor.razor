@@ -1,0 +1,54 @@
+﻿@using Microsoft.EntityFrameworkCore
+@using NaryadAi.Data
+@using NaryadAi.Models
+@using MudBlazor
+
+<div class="d-flex gap-4 mb-6">
+    <MudTextField @bind-Value="newSiteName"
+                  Label="Название участка"
+                  Variant="Variant.Outlined"
+                  Margin="Margin.Dense"
+                  Class="flex-grow-1" />
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               DisableElevation="true"
+               OnClick="AddSite">
+        ДОБАВИТЬ
+    </MudButton>
+</div>
+
+<MudTable Items="sites"
+          Hover="true"
+          Elevation="0"
+          Outlined="true"
+          Class="rounded-lg"
+          RowsPerPage="10"
+          RowsPerPageOptions="new int[] { 10, 25, 50 }">
+    <HeaderContent>
+        <MudTh>Название участка</MudTh>
+        <MudTh Style="width:100px;text-align:center;">
+            Действия
+        </MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Название">
+            <b>@context.Name</b>
+        </MudTd>
+        <MudTd Style="text-align:center;">
+
+            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                           Color="Color.Error"
+                           Size="Size.Small"
+                           OnClick="@(() => DeleteSite(context))" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Typo="Typo.body2" Class="pa-4">
+            Участки ещё не добавлены
+        </MudText>
+    </NoRecordsContent>
+    <PagerContent>
+        <MudTablePager RowsPerPageString="Строк на странице"
+                       PageSizeOptions="new int[] { 10, 25, 50 }" />
+    </PagerContent>
+</MudTable>

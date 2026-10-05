@@ -10,14 +10,29 @@ public class WorkOrderService(AppDbContext db, IHubContext<WorkOrdersHub> hub, A
 {
     private static readonly IReadOnlyDictionary<string, string[]> Transitions = new Dictionary<string, string[]>
     {
-        [WorkOrderStates.Issued] = [WorkOrderStates.Accepted, WorkOrderStates.Queued, WorkOrderStates.Rejected],
-        [WorkOrderStates.Accepted] = [WorkOrderStates.InProgress],
-        [WorkOrderStates.Queued] = [WorkOrderStates.Accepted, WorkOrderStates.InProgress],
-        [WorkOrderStates.InProgress] = [WorkOrderStates.Paused, WorkOrderStates.Completed],
-        [WorkOrderStates.Paused] = [WorkOrderStates.InProgress],
-        [WorkOrderStates.Rework] = [WorkOrderStates.Accepted, WorkOrderStates.InProgress, WorkOrderStates.Closed],
-        [WorkOrderStates.Completed] = [WorkOrderStates.AiReview],
-        [WorkOrderStates.AiReview] = [WorkOrderStates.Rework, WorkOrderStates.Closed]
+        [WorkOrderStates.Issued] =
+        [WorkOrderStates.Accepted, WorkOrderStates.Queued, WorkOrderStates.Rejected],
+
+        [WorkOrderStates.Accepted] =
+        [WorkOrderStates.InProgress],
+
+        [WorkOrderStates.Queued] =
+        [WorkOrderStates.Accepted, WorkOrderStates.InProgress],
+
+        [WorkOrderStates.InProgress] =
+        [WorkOrderStates.Paused, WorkOrderStates.Completed],
+
+        [WorkOrderStates.Paused] =
+        [WorkOrderStates.InProgress],
+
+        [WorkOrderStates.Rework] =
+        [WorkOrderStates.Accepted, WorkOrderStates.InProgress],
+
+        [WorkOrderStates.Completed] =
+        [WorkOrderStates.AiReview],
+
+        [WorkOrderStates.AiReview] =
+        [WorkOrderStates.Rework, WorkOrderStates.Closed]
     };
 
     public async Task<WorkOrder> CreateAsync(WorkOrder order, int masterId, CancellationToken cancellationToken = default)
@@ -62,8 +77,6 @@ public class WorkOrderService(AppDbContext db, IHubContext<WorkOrdersHub> hub, A
     public async Task TransitionAsync(int orderId, string target, int? actorId, string? reason = null,
         CancellationToken cancellationToken = default)
     {
-        // The row lock serializes concurrent transitions (master, worker, background jobs) of one order
-        // so the status check below cannot be invalidated by a parallel writer before SaveChanges.
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         var order = await db.WorkOrders
             .FromSqlInterpolated($"SELECT * FROM \"WorkOrders\" WHERE \"Id\" = {orderId} FOR UPDATE")
@@ -132,8 +145,6 @@ public class WorkOrderService(AppDbContext db, IHubContext<WorkOrdersHub> hub, A
     public async Task SubmitCompletionAsync(int orderId, int workerId, string worksDone, string faultCode,
         string? comment, CancellationToken cancellationToken = default)
     {
-        // Row lock prevents a double submit / parallel master action from passing the status check twice.
-        // It is released right after the status flip; the slow AI review runs outside the transaction.
         await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
         var order = await db.WorkOrders
             .FromSqlInterpolated($"SELECT * FROM \"WorkOrders\" WHERE \"Id\" = {orderId} AND \"ExecutorId\" = {workerId} FOR UPDATE")
@@ -220,8 +231,6 @@ public class WorkOrderService(AppDbContext db, IHubContext<WorkOrdersHub> hub, A
             throw new InvalidOperationException("Этот наряд недоступен этому мастеру.");
         return master;
     }
-
-    /// <summary>Master reassigns an order to another worker; the order returns to «Выдан» and is logged.</summary>
     public async Task ReassignAsync(int orderId, int masterId, int newExecutorId, string? reason,
         CancellationToken cancellationToken = default)
     {
@@ -261,8 +270,6 @@ public class WorkOrderService(AppDbContext db, IHubContext<WorkOrdersHub> hub, A
         await tx.CommitAsync(cancellationToken);
         await PublishAsync(orderId, order.Status, cancellationToken);
     }
-
-    /// <summary>Master changes the priority of an active order; the change is recorded in the history.</summary>
     public async Task ChangePriorityAsync(int orderId, int masterId, string priority, string? reason,
         CancellationToken cancellationToken = default)
     {

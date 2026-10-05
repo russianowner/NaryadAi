@@ -1,0 +1,62 @@
+﻿.qr-scanner-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    background: rgba(0, 0, 0, 0.78);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.qr-scanner-modal {
+    width: min(520px, 100%);
+    background: white;
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.qr-scanner-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.qr-camera-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    border-radius: 16px;
+    background: #111;
+}
+
+    .qr-camera-frame video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+.qr-camera-corners {
+    position: absolute;
+    left: 15%;
+    top: 20%;
+    width: 70%;
+    height: 45%;
+    border: 3px solid rgba(255, 255, 255, 0.9);
+    border-radius: 18px;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.15);
+}
+
+.qr-camera-hint {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 18px;
+    text-align: center;
+    color: white;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+}
