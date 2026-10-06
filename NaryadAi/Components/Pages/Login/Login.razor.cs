@@ -23,6 +23,8 @@ namespace NaryadAi.Components.Pages.Login
         private string enteredPin = "";
         private bool showError = false;
 
+        private bool isProcessing = false;
+
         private string username = "";
         private string password = "";
         private bool showLoginError = false;
@@ -64,54 +66,46 @@ namespace NaryadAi.Components.Pages.Login
 
         private async Task AddDigit(string digit)
         {
-            if (enteredPin.Length < 4)
-            {
-                enteredPin += digit;
-                showError = false;
+            if (isProcessing || enteredPin.Length >= 4) return;
+            enteredPin += digit;
+            showError = false;
 
-                if (enteredPin.Length == 4)
-                {
-                    await ValidatePin();
-                }
+            if (enteredPin.Length == 4)
+            {
+                isProcessing = true;
+                StateHasChanged();
+                await Task.Delay(50); 
+                await ValidatePin();
+                isProcessing = false;
             }
         }
 
         private void RemoveDigit()
         {
-            if (enteredPin.Length > 0)
-            {
-                enteredPin = enteredPin.Substring(0, enteredPin.Length - 1);
-                showError = false;
-            }
+            if (isProcessing || enteredPin.Length == 0) return;
+
+            enteredPin = enteredPin.Substring(0, enteredPin.Length - 1);
+            showError = false;
         }
 
         private async Task ValidatePin()
         {
             var employee = await DbContext.Employees
                 .FirstOrDefaultAsync(e => e.PinCode == enteredPin);
+
             if (employee != null)
             {
                 await BrowserStorage.SetAsync("UserId", employee.Id);
                 await BrowserStorage.SetAsync("UserRole", employee.Role);
                 await BrowserStorage.SetAsync("UserName", employee.FullName);
-                if (employee.Role == "Master")
-                {
-                    Navigation.NavigateTo("/master");
-                }
-                else if (employee.Role == "Worker")
-                {
-                    Navigation.NavigateTo("/worker");
-                }
-                else if (employee.Role == "Manager")
-                {
-                    Navigation.NavigateTo("/dashboard");
-                }
-                else if (employee.Role == "Admin")
-                {
-                    Navigation.NavigateTo("/admin/employees");
-                }
+
+                if (employee.Role == "Master") Navigation.NavigateTo("/master");
+                else if (employee.Role == "Worker") Navigation.NavigateTo("/worker");
+                else if (employee.Role == "Manager") Navigation.NavigateTo("/dashboard");
+                else if (employee.Role == "Admin") Navigation.NavigateTo("/admin/employees");
                 return;
             }
+
             showError = true;
             enteredPin = "";
         }

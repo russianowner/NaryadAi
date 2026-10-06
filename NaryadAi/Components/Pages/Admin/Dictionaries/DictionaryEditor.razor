@@ -4,9 +4,19 @@
 @inject AppDbContext DbContext
 @inject ISnackbar Snackbar
 
-<div class="d-flex gap-4 mb-6">
-    <MudTextField @bind-Value="newItemName" Label="@($"Новая {CategoryName.ToLower()}")" Variant="Variant.Outlined" Margin="Margin.Dense" />
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" DisableElevation="true" OnClick="AddItem">
+<div class="d-flex align-center gap-2 mb-4 pr-3">
+    <MudTextField @bind-Value="newItemName"
+                  Label="@($"Новая {CategoryName.ToLower()}")"
+                  Variant="Variant.Outlined"
+                  Margin="Margin.Dense"
+                  Class="flex-grow-1" />
+
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               DisableElevation="true"
+               OnClick="AddItem"
+               Size="Size.Small"
+               Style="height: 38px; margin-top: 4px; padding: 0 20px; border-radius: 6px;">
         Добавить
     </MudButton>
 </div>
