@@ -25,11 +25,13 @@ namespace NaryadAi.Components.Pages.Master
         private int refreshPending;
         private const int OrdersPerLanePage = 4;
         private readonly Dictionary<string, int> lanePages = new();
-
+        private bool isCreatingOrder;
         private bool isQrCameraOpen;
         private bool suppressNotifierRefresh;
         private bool disposed;
         private string? filterSite;
+
+        private bool isDataLoading = false;
         private int? filterEquipment;
         private int? filterExecutor;
         private string? filterPriority;
@@ -111,33 +113,43 @@ namespace NaryadAi.Components.Pages.Master
 
         private async Task LoadData()
         {
-            siteList = await DbContext.Sites
-                .AsNoTracking()
-                .OrderBy(s => s.Name)
-                .ToListAsync();
+            if (isDataLoading) return;
+            isDataLoading = true;
 
-            equipmentList = await DbContext.Equipments
-                .AsNoTracking()
-                .Include(e => e.Site)
-                .OrderBy(e => e.Name)
-                .ToListAsync();
+            try
+            {
+                siteList = await DbContext.Sites
+                    .AsNoTracking()
+                    .OrderBy(s => s.Name)
+                    .ToListAsync();
 
-            workers = await DbContext.Employees
-                .AsNoTracking()
-                .Where(e => e.Role == "Worker")
-                .OrderBy(e => e.FullName)
-                .ToListAsync();
+                equipmentList = await DbContext.Equipments
+                    .AsNoTracking()
+                    .Include(e => e.Site)
+                    .OrderBy(e => e.Name)
+                    .ToListAsync();
 
-            boardOrders = await DbContext.WorkOrders
-                .AsNoTracking()
-                .Include(x => x.Equipment)
-                .Include(x => x.Executor)
-                .Include(x => x.AiEvaluations)
-                .OrderByDescending(x => x.CreatedAt)
-                .Take(200)
-                .ToListAsync();
+                workers = await DbContext.Employees
+                    .AsNoTracking()
+                    .Where(e => e.Role == "Worker")
+                    .OrderBy(e => e.FullName)
+                    .ToListAsync();
 
-            filteredEquipmentList = new();
+                boardOrders = await DbContext.WorkOrders
+                    .AsNoTracking()
+                    .Include(x => x.Equipment)
+                    .Include(x => x.Executor)
+                    .Include(x => x.AiEvaluations)
+                    .OrderByDescending(x => x.CreatedAt)
+                    .Take(200)
+                    .ToListAsync();
+
+                filteredEquipmentList = new();
+            }
+            finally
+            {
+                isDataLoading = false;
+            }
         }
 
         private void OnSiteSelected(int? siteId)
@@ -187,32 +199,48 @@ namespace NaryadAi.Components.Pages.Master
 
         private void OnWorkOrderChanged(WorkOrderUpdate update)
         {
+            if (!string.IsNullOrWhiteSpace(update.Message))
+            {
+                _ = InvokeAsync(async () =>
+                {
+                    try
+                    {
+                        var relatedOrder = boardOrders.FirstOrDefault(x => x.Id == update.WorkOrderId);
+                        if (relatedOrder == null || relatedOrder.MasterId == currentMasterId)
+                        {
+                            await JSRuntime.InvokeVoidAsync(
+                                "naryadNotifications.show",
+                                update.Emergency ? $"⚠ АВАРИЙНЫЙ наряд {update.WorkOrderId}" : $"Контроль наряда {update.WorkOrderId}",
+                                new
+                                {
+                                    body = update.Message,
+                                    data = update.Emergency ? "emergency" : "normal"
+                                });
+                        }
+                    }
+                    catch { }
+                });
+            }
+
             if (suppressNotifierRefresh || Interlocked.Exchange(ref refreshPending, 1) != 0)
+            {
                 return;
+            }
+
             _ = InvokeAsync(async () =>
             {
                 try
                 {
-                    await Task.Delay(50);
+                    await Task.Delay(100);
                     if (disposed || !isAuthorized)
                         return;
-                    var relatedOrder = boardOrders.FirstOrDefault(x => x.Id == update.WorkOrderId);
                     await LoadData();
-                    if (!string.IsNullOrWhiteSpace(update.Message) &&
-                        (relatedOrder == null || relatedOrder.MasterId == currentMasterId))
-                    {
-                        await JSRuntime.InvokeVoidAsync(
-                            "naryadNotifications.show",
-                            update.Emergency
-                                ? $"АВАРИЙНЫЙ наряд {update.WorkOrderId}"
-                                : $"Контроль наряда {update.WorkOrderId}",
-                            new
-                            {
-                                body = update.Message,
-                                data = update.Emergency ? "emergency" : "normal"
-                            });
-                    }
                     StateHasChanged();
+                }
+                catch (OperationCanceledException) { }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Ошибка обновления доски мастера: {ex}");
                 }
                 finally
                 {
@@ -291,38 +319,65 @@ namespace NaryadAi.Components.Pages.Master
 
         private async Task CreateOrder()
         {
-            if (string.IsNullOrWhiteSpace(newOrder.Description) || newOrder.EquipmentId == 0 || newOrder.ExecutorId == null)
-            {
-                Snackbar.Add(Language.T("Заполните описание, выберите оборудование и исполнителя"), Severity.Warning);
+            if (isCreatingOrder)
                 return;
-            }
-            var eq = equipmentList.First(e => e.Id == newOrder.EquipmentId);
-            newOrder.Location = eq.Site?.Name ?? eq.Location;
-            newOrder.Deadline = DateTime.SpecifyKind(deadlineLocal, DateTimeKind.Local).ToUniversalTime();
-            suppressNotifierRefresh = true;
+            isCreatingOrder = true;
             try
             {
-                await WorkOrderService.CreateAsync(newOrder, currentMasterId);
-                if (photoBefore != null)
+                if (string.IsNullOrWhiteSpace(newOrder.Description) ||
+                    newOrder.EquipmentId == 0 ||
+                    newOrder.ExecutorId == null)
                 {
-                    await PhotoService.SaveAsync(newOrder.Id, currentMasterId, "До", photoBefore);
+                    Snackbar.Add(
+                        Language.T("Заполните описание, выберите оборудование и исполнителя"),
+                        Severity.Warning);
+
+                    return;
                 }
-            }
-            catch (InvalidOperationException ex)
-            {
-                Snackbar.Add(ex.Message, Severity.Warning);
-                return;
+                var eq = equipmentList.First(e => e.Id == newOrder.EquipmentId);
+                newOrder.Location = eq.Site?.Name ?? eq.Location;
+                newOrder.Deadline =
+                    DateTime.SpecifyKind(deadlineLocal, DateTimeKind.Local)
+                        .ToUniversalTime();
+                suppressNotifierRefresh = true;
+                try
+                {
+                    await WorkOrderService.CreateAsync(newOrder, currentMasterId);
+
+                    if (photoBefore != null)
+                    {
+                        await PhotoService.SaveAsync(
+                            newOrder.Id,
+                            currentMasterId,
+                            "До",
+                            photoBefore);
+                    }
+                }
+                catch (InvalidOperationException ex)
+                {
+                    Snackbar.Add(ex.Message, Severity.Warning);
+                    return;
+                }
+                finally
+                {
+                    suppressNotifierRefresh = false;
+                }
+                Snackbar.Add(
+                    $"{Language.T("Наряд")} {newOrder.Number} {Language.T("Наряд создан").ToLower()}!",
+                    Severity.Success);
+                newOrder = new WorkOrder
+                {
+                    Type = "Плановый",
+                    Priority = "Обычный"
+                };
+                deadlineLocal = DateTime.Now.AddHours(24);
+                photoBefore = null;
+                await LoadData();
             }
             finally
             {
-                suppressNotifierRefresh = false;
+                isCreatingOrder = false;
             }
-
-            Snackbar.Add($"{Language.T("Наряд")} {newOrder.Number} {Language.T("Наряд создан").ToLower()}!", Severity.Success);
-            newOrder = new WorkOrder { Type = "Плановый", Priority = "Обычный" };
-            deadlineLocal = DateTime.Now.AddHours(24);
-            photoBefore = null; 
-            await LoadData();
         }
 
         private async Task ApproveOrder(WorkOrder order)

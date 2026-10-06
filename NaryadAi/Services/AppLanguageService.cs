@@ -266,10 +266,11 @@ public sealed class AppLanguageService(ProtectedLocalStorage storage, IJSRuntime
             await javascript.InvokeVoidAsync("naryadAi.setLanguage", Current == "KZ" ? "kk" : "ru");
             Changed?.Invoke();
         }
+        catch (OperationCanceledException) { }
         catch (InvalidOperationException) { }
         catch (JSException) { }
     }
-
+    
     public async Task SetAsync(string language)
     {
         if (language is not ("RU" or "KZ") || language == Current) return;

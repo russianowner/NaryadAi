@@ -58,7 +58,7 @@ public class WorkOrderService(AppDbContext db, IHubContext<WorkOrdersHub> hub, A
         order.SiteId = equipment.SiteId;
         if (order.Deadline <= DateTime.UtcNow)
             order.Deadline = DateTime.UtcNow.AddHours(order.Priority == "Аварийный" ? 2 : 24);
-
+        order.Id = 0;
         db.WorkOrders.Add(order);
         db.WorkOrderEvents.Add(new WorkOrderEvent
         {

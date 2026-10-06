@@ -19,7 +19,6 @@
 </head>
 <body>
     <Routes @rendermode="InteractiveServer" />
-
     <ReconnectModal />
     <script src="@Assets["download.js"]"></script>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
@@ -33,61 +32,69 @@
                     .catch(err => console.error('Ошибка регистрации Service Worker:', err));
             });
         }
-        window.naryadNotifications = {
-            requestPermission: async function() {
-                if (!('Notification' in window)) return false;
-                if (Notification.permission === 'granted') return true;
-                const permission = await Notification.requestPermission();
-                return permission === 'granted';
-            },
-            show: function(title, options) {
-                if (!('Notification' in window) || Notification.permission !== 'granted') return;
-                
-                if (options && options.data === 'emergency') {
-                    try {
-                        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                        const osc = ctx.createOscillator();
-                        const gain = ctx.createGain();
-                        osc.connect(gain);
-                        gain.connect(ctx.destination);
-                        osc.type = 'square';
-                        osc.frequency.setValueAtTime(440, ctx.currentTime);
-                        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.2);
-                        osc.frequency.setValueAtTime(440, ctx.currentTime + 0.4);
-                        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.6);
-                        gain.gain.setValueAtTime(0.5, ctx.currentTime);
-                        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.5);
-                        osc.start();
-                        osc.stop(ctx.currentTime + 1.5);
-                    } catch (e) { console.error(e); }
-                }
+            window.naryadNotifications = {
+                requestPermission: async function() {
+                    if (!('Notification' in window)) return false;
+                    if (Notification.permission === 'granted') return true;
+                    const permission = await Notification.requestPermission();
+                    return permission === 'granted';
+                },
+                show: async function(title, options) {
+                    if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
-                const notif = new Notification(title, options);
-                notif.onclick = function() {
-                    window.focus();
-                    notif.close();
-                };
-            }
-        };
-        window.naryadHardware = {
-            startListening: function (dotNetReference, methodName) {
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                if (!SpeechRecognition) {
-                    alert('Ваш браузер не поддерживает голосовой ввод. Рекомендуется использовать Chrome.');
-                    return;
-                }
-                const recognition = new SpeechRecognition();
-                recognition.lang = document.documentElement.lang === 'kk' ? 'kk-KZ' : 'ru-RU';
-                recognition.interimResults = false;
-                recognition.maxAlternatives = 1;
+                    if (options && options.data === 'emergency') {
+                        try {
+                            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                            const osc = ctx.createOscillator();
+                            const gain = ctx.createGain();
+                            osc.connect(gain);
+                            gain.connect(ctx.destination);
+                            osc.type = 'square';
+                            osc.frequency.setValueAtTime(440, ctx.currentTime);
+                            osc.frequency.setValueAtTime(880, ctx.currentTime + 0.2);
+                            osc.frequency.setValueAtTime(440, ctx.currentTime + 0.4);
+                            osc.frequency.setValueAtTime(880, ctx.currentTime + 0.6);
+                            gain.gain.setValueAtTime(0.5, ctx.currentTime);
+                            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.5);
+                            osc.start();
+                            osc.stop(ctx.currentTime + 1.5);
+                        } catch (e) { console.error(e); }
+                    }
 
-                recognition.onresult = function (event) {
-                    const text = event.results[0][0].transcript;
-                    dotNetReference.invokeMethodAsync(methodName, text);
-                };
-                recognition.onerror = function (event) {
-                    console.warn('Ошибка распознавания речи:', event.error);
-                };
+                    if ('serviceWorker' in navigator) {
+                        try {
+                            const reg = await navigator.serviceWorker.ready;
+                            await reg.showNotification(title, options);
+                            return; 
+                        } catch (err) {
+                            console.warn('Ошибка Service Worker, пробуем стандартный метод', err);
+                        }
+                    }
+                    const notif = new Notification(title, options);
+                    notif.onclick = function() {
+                        window.focus();
+                        notif.close();
+                    };
+                }
+            };
+            window.naryadHardware = {
+                startListening: function(dotNetReference, methodName) {
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    if (!SpeechRecognition) {
+                        alert('Ваш браузер не поддерживает голосовой ввод. Рекомендуется использовать Chrome.');
+                        return;
+                    }
+                    const recognition = new SpeechRecognition();
+                    recognition.lang = document.documentElement.lang === 'kk' ? 'kk-KZ' : 'ru-RU';
+                    recognition.interimResults = false;
+                    recognition.maxAlternatives = 1;
+                    recognition.onresult = function(event) {
+                        const text = event.results[0][0].transcript;
+                        dotNetReference.invokeMethodAsync(methodName, text);
+                    };
+                    recognition.onerror = function(event) {
+                        console.warn('Ошибка распознавания речи:', event.error);
+                    };
                 recognition.start();
             },
                 startQrCamera: async function() {

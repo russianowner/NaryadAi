@@ -26,6 +26,8 @@ namespace NaryadAi.Components.Pages.Worker
         private int currentWorkerId = 0;
         private int refreshPending;
         private bool suppressNotifierRefresh;
+
+        private bool isDataLoading = false;
         private bool disposed;
         private DotNetObjectReference<WorkerPanel>? dotNetRef;
         private List<WorkOrder> myTasks = new();
@@ -78,49 +80,74 @@ namespace NaryadAi.Components.Pages.Worker
 
         private async Task LoadMyTasks()
         {
-            myTasks = await DbContext.WorkOrders.AsNoTracking()
-                .Include(w => w.Equipment)
-                .Include(w => w.Photos)
-                .Include(w => w.Materials)
-                .Include(w => w.AiEvaluations) 
-                .Where(n => n.ExecutorId == currentWorkerId && n.Status != "Закрыт" && n.Status != "Исполнено" && n.Status != "Проверка ИИ" && n.Status != "Отклонён")
-                .OrderByDescending(n => n.Priority == "Аварийный")
-                .ThenBy(n => n.Deadline)
-                .ToListAsync();
+            if (isDataLoading) return;
+            isDataLoading = true;
+
+            try
+            {
+                myTasks = await DbContext.WorkOrders.AsNoTracking()
+                    .Include(w => w.Equipment)
+                    .Include(w => w.Photos)
+                    .Include(w => w.Materials)
+                    .Include(w => w.AiEvaluations)
+                    .Where(n => n.ExecutorId == currentWorkerId && n.Status != "Закрыт" && n.Status != "Исполнено" && n.Status != "Проверка ИИ" && n.Status != "Отклонён")
+                    .OrderByDescending(n => n.Priority == "Аварийный")
+                    .ThenBy(n => n.Deadline)
+                    .ToListAsync();
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            finally
+            {
+                isDataLoading = false;
+            }
         }
 
         private void OnWorkOrderChanged(WorkOrderUpdate update)
         {
+            if (!string.IsNullOrWhiteSpace(update.Message))
+            {
+                _ = InvokeAsync(async () =>
+                {
+                    try
+                    {
+                        var relatedTask = myTasks.FirstOrDefault(x => x.Id == update.WorkOrderId);
+                        if (relatedTask != null)
+                        {
+                            await JSRuntime.InvokeVoidAsync(
+                                "naryadNotifications.show",
+                                update.Emergency ? $"⚠ АВАРИЙНЫЙ наряд {relatedTask.Number}" : $"Наряд {relatedTask.Number}",
+                                new
+                                {
+                                    body = update.Message,
+                                    data = update.Emergency ? "emergency" : "normal"
+                                });
+                        }
+                    }
+                    catch {  }
+                });
+            }
             if (suppressNotifierRefresh || Interlocked.Exchange(ref refreshPending, 1) != 0)
+            {
                 return;
+            }
 
             _ = InvokeAsync(async () =>
             {
                 try
                 {
-                    await Task.Delay(50);
+                    await Task.Delay(100);
 
                     if (disposed || !isAuthorized)
                         return;
-
-                    materialItems = await DbContext.ReferenceItems
-                        .Where(r => r.Category == "Material")
-                        .OrderBy(r => r.Name)
-                        .ToListAsync();
-
                     var oldTaskIds = myTasks.Select(x => x.Id).ToHashSet();
-
                     await LoadMyTasks();
-
-                    var newTasks = myTasks
-                        .Where(x => !oldTaskIds.Contains(x.Id))
-                        .ToList();
+                    var newTasks = myTasks.Where(x => !oldTaskIds.Contains(x.Id)).ToList();
 
                     foreach (var task in newTasks)
                     {
-                        var isEmergency =
-                            task.Priority == "Аварийный" ||
-                            task.Type == "Внеплановый";
+                        var isEmergency = task.Priority == "Аварийный" || task.Type == "Внеплановый";
 
                         await JSRuntime.InvokeVoidAsync(
                             "naryadNotifications.show",
@@ -132,26 +159,13 @@ namespace NaryadAi.Components.Pages.Worker
                             });
                     }
 
-                    if (!string.IsNullOrWhiteSpace(update.Message))
-                    {
-                        var relatedTask = myTasks.FirstOrDefault(x => x.Id == update.WorkOrderId);
-
-                        if (relatedTask != null)
-                        {
-                            await JSRuntime.InvokeVoidAsync(
-                                "naryadNotifications.show",
-                                update.Emergency
-                                    ? $"⚠ АВАРИЙНЫЙ наряд {relatedTask.Number}"
-                                    : $"Наряд {relatedTask.Number}",
-                                new
-                                {
-                                    body = update.Message,
-                                    data = update.Emergency ? "emergency" : "normal"
-                                });
-                        }
-                    }
-
                     StateHasChanged();
+                }
+                catch (OperationCanceledException) { }
+                catch (JSDisconnectedException) { }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Ошибка обработки WorkOrderUpdate: {ex}");
                 }
                 finally
                 {
@@ -237,8 +251,17 @@ namespace NaryadAi.Components.Pages.Worker
         {
             try
             {
-                await PhotoService.SaveAsync(selectedTask!.Id, currentWorkerId, "После", e.File);
+                await PhotoService.SaveAsync(
+                    selectedTask!.Id,
+                    currentWorkerId,
+                    "После",
+                    e.File);
+                selectedTask = await DbContext.WorkOrders
+                    .Include(x => x.Photos)
+                    .FirstOrDefaultAsync(x => x.Id == selectedTask.Id);
+
                 Snackbar.Add("Фото сохранено", Severity.Success);
+                StateHasChanged();
             }
             catch (InvalidOperationException ex)
             {
@@ -246,7 +269,9 @@ namespace NaryadAi.Components.Pages.Worker
             }
             catch (IOException)
             {
-                Snackbar.Add("Не удалось сохранить фото. Проверьте свободное место и повторите загрузку.", Severity.Error);
+                Snackbar.Add(
+                    "Не удалось сохранить фото. Проверьте свободное место и повторите загрузку.",
+                    Severity.Error);
             }
         }
 
@@ -273,15 +298,23 @@ namespace NaryadAi.Components.Pages.Worker
 
         private async Task ConfirmCloseTask()
         {
-            if (selectedTask!.Type == "Внеплановый" && string.IsNullOrEmpty(selectedTask.PhotoAfterPath))
+            if (selectedTask!.Type == "Внеплановый" &&
+            !selectedTask.Photos.Any(x => x.Type == "После"))
             {
-                Snackbar.Add("Для аварийного наряда обязательно прикрепите фото!", Severity.Error);
+                Snackbar.Add(
+                    "Для аварийного наряда обязательно прикрепите фото!",
+                    Severity.Error);
+
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(selectedTask.CloseWorksDone) || string.IsNullOrWhiteSpace(selectedTask.CloseFaultCode))
+            if (string.IsNullOrWhiteSpace(selectedTask.CloseWorksDone) ||
+                string.IsNullOrWhiteSpace(selectedTask.CloseFaultCode))
             {
-                Snackbar.Add("Заполните обязательные поля (Работы и Шифр)", Severity.Warning);
+                Snackbar.Add(
+                    "Заполните обязательные поля (Работы и Шифр)",
+                    Severity.Warning);
+
                 return;
             }
 

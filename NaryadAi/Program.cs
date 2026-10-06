@@ -36,7 +36,8 @@ builder.Services.AddSingleton<WorkOrderChangeNotifier>();
 builder.Services.AddHostedService<WorkOrderDeadlineMonitor>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")),
+    ServiceLifetime.Transient);
 
 var app = builder.Build();
 

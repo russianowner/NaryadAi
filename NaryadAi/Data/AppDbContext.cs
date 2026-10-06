@@ -20,6 +20,9 @@ namespace NaryadAi.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<WorkOrder>()
+                .Property(x => x.Id)
+                .ValueGeneratedOnAdd();
 
             modelBuilder.Entity<WorkOrder>().HasIndex(x => x.Number).IsUnique();
             modelBuilder.Entity<WorkOrder>().HasIndex(x => new { x.Status, x.Deadline });

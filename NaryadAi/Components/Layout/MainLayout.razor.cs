@@ -40,14 +40,21 @@ namespace NaryadAi.Components.Layout
 
         protected override async Task OnAfterRenderAsync(bool firstRender)
         {
-            if (firstRender)
+            if (!firstRender)
+                return;
+            try
             {
                 await Language.InitializeAsync();
                 var roleResult = await BrowserStorage.GetAsync<string>("UserRole");
                 var nameResult = await BrowserStorage.GetAsync<string>("UserName");
-                if (roleResult.Success) userRole = roleResult.Value;
-                if (nameResult.Success) userName = nameResult.Value;
-                StateHasChanged();
+                if (roleResult.Success)
+                    userRole = roleResult.Value;
+                if (nameResult.Success)
+                    userName = nameResult.Value;
+                await InvokeAsync(StateHasChanged);
+            }
+            catch (OperationCanceledException)
+            {
             }
         }
 
