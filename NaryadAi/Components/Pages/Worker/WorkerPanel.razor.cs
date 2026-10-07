@@ -251,15 +251,20 @@ namespace NaryadAi.Components.Pages.Worker
         {
             try
             {
+                var workOrderId = selectedTask!.Id;
                 await PhotoService.SaveAsync(
-                    selectedTask!.Id,
+                    workOrderId,
                     currentWorkerId,
                     "После",
                     e.File);
-                selectedTask = await DbContext.WorkOrders
-                    .Include(x => x.Photos)
-                    .FirstOrDefaultAsync(x => x.Id == selectedTask.Id);
-
+                var photos = await DbContext.WorkOrderPhotos
+                    .AsNoTracking()
+                    .Where(x => x.WorkOrderId == workOrderId)
+                    .OrderBy(x => x.CapturedAt)
+                    .ToListAsync();
+                selectedTask.Photos.Clear();
+                foreach (var photo in photos)
+                    selectedTask.Photos.Add(photo);
                 Snackbar.Add("Фото сохранено", Severity.Success);
                 StateHasChanged();
             }
